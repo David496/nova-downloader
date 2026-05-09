@@ -16,7 +16,7 @@ class DownloadRow(ctk.CTkFrame):
         self.thumb_lbl.grid(row=0, column=0, rowspan=3, padx=15, pady=15, sticky="w")
         
         if task.thumbnail_url:
-            load_image_async(task.thumbnail_url, (120, 68), self.on_image_loaded)
+            load_image_async(self, task.thumbnail_url, (120, 68), self.on_image_loaded)
             
         # Top-right: Title & Badges
         top_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -47,10 +47,17 @@ class DownloadRow(ctk.CTkFrame):
         self.speed_lbl.grid(row=0, column=1, sticky="e")
 
     def on_image_loaded(self, ctk_image):
-        if ctk_image:
-            self.thumb_lbl.configure(image=ctk_image, text="")
-        else:
-            self.thumb_lbl.configure(text="Sin\nImagen")
+        if not self.winfo_exists(): return
+        
+        try:
+            if ctk_image:
+                self.current_image = ctk_image
+                self.thumb_lbl.configure(image=ctk_image, text="")
+            else:
+                self.thumb_lbl.configure(text="Sin\nImagen")
+        except Exception as e:
+            print(f"Error updating row thumbnail: {e}")
+            self.thumb_lbl.configure(image=None, text="Error")
 
     def update_progress(self, percent, speed_str, downloaded_str):
         self.progress_bar.set(percent / 100)

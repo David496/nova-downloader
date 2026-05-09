@@ -13,18 +13,35 @@ Nova Downloader es una aplicación de escritorio moderna y minimalista para desc
 
 ## Instalación y Ejecución
 
-La aplicación utiliza un entorno virtual para aislar sus dependencias (`PySide6`, `yt-dlp`).
+Para clonar y configurar este proyecto en una nueva computadora, sigue estos pasos:
 
-1. **Abre tu terminal** (PowerShell o CMD).
-2. **Navega a la carpeta** de la aplicación:
-   ```powershell
-   cd C:\Users\USER\Desktop\app
+1. **Clona el repositorio**:
+   ```bash
+   git clone <URL_DE_TU_REPOSITORIO>
+   cd app
    ```
+
+2. **Crea un entorno virtual**:
+   ```powershell
+   python -m venv venv
+   ```
+
 3. **Activa el entorno virtual**:
+   - En Windows:
+     ```powershell
+     .\venv\Scripts\activate
+     ```
+   - En macOS/Linux:
+     ```bash
+     source venv/bin/activate
+     ```
+
+4. **Instala las dependencias**:
    ```powershell
-   .\venv\Scripts\activate
+   pip install -r requirements.txt
    ```
-4. **Ejecuta la aplicación**:
+
+5. **Ejecuta la aplicación**:
    ```powershell
    python main.py
    ```

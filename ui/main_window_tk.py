@@ -35,15 +35,15 @@ class MainWindow(ctk.CTk):
         self.logo_label.grid(row=0, column=0, padx=20, pady=(30, 30))
         
         # Buttons
-        self.btn_home = ctk.CTkButton(self.sidebar, text="🏠  Inicio", fg_color="transparent", text_color=("gray10", "gray90"), 
+        self.btn_home = ctk.CTkButton(self.sidebar, text="Inicio", fg_color="transparent", text_color=("gray10", "gray90"), 
                                       hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("home"))
         self.btn_home.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
         
-        self.btn_downloads = ctk.CTkButton(self.sidebar, text="⬇️  Descargas", fg_color="transparent", text_color=("gray10", "gray90"), 
+        self.btn_downloads = ctk.CTkButton(self.sidebar, text="Descargas", fg_color="transparent", text_color=("gray10", "gray90"), 
                                            hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("downloads"))
         self.btn_downloads.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
         
-        self.btn_library = ctk.CTkButton(self.sidebar, text="📚  Biblioteca", fg_color="transparent", text_color=("gray10", "gray90"), 
+        self.btn_library = ctk.CTkButton(self.sidebar, text="Biblioteca", fg_color="transparent", text_color=("gray10", "gray90"), 
                                          hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("library"))
         self.btn_library.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
         
