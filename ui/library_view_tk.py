@@ -5,16 +5,16 @@ from ui.components import Badge, show_toast
 
 class LibraryRow(ctk.CTkFrame):
     def __init__(self, parent, item_id, title, ftype, date, path):
-        super().__init__(parent, fg_color=("gray85", "gray15"), corner_radius=8)
+        super().__init__(parent, fg_color=("gray90", "gray12"), corner_radius=10)
         self.path = path
         
         self.grid_columnconfigure(0, weight=1)
         
         # Left side: Title and Type
         info_frame = ctk.CTkFrame(self, fg_color="transparent")
-        info_frame.grid(row=0, column=0, sticky="w", padx=15, pady=15)
+        info_frame.grid(row=0, column=0, sticky="w", padx=20, pady=15)
         
-        title_lbl = ctk.CTkLabel(info_frame, text=title, font=ctk.CTkFont(weight="bold"))
+        title_lbl = ctk.CTkLabel(info_frame, text=title, font=ctk.CTkFont(family="Segoe UI", size=15, weight="bold"))
         title_lbl.pack(anchor="w")
         
         badges_date_frame = ctk.CTkFrame(info_frame, fg_color="transparent")
@@ -23,13 +23,15 @@ class LibraryRow(ctk.CTkFrame):
         b_color = "#FF0000" if ftype.lower() == "video" else "#555555"
         Badge(badges_date_frame, text=ftype.upper(), color=b_color).pack(side="left")
         
-        ctk.CTkLabel(badges_date_frame, text=f" • {date}", text_color="gray", font=ctk.CTkFont(size=11)).pack(side="left", padx=(5,0))
+        ctk.CTkLabel(badges_date_frame, text=f" • {date}", text_color="gray", font=ctk.CTkFont(family="Segoe UI", size=12)).pack(side="left", padx=(5,0))
         
         # Right side: Action Button
-        btn = ctk.CTkButton(self, text="📁 Abrir", width=80, fg_color="transparent", 
-                            border_width=1, border_color="#FF0000", text_color="#FF0000", hover_color=("#FFCCCC", "#440000"),
+        btn = ctk.CTkButton(self, text="📁 Abrir carpeta", width=120, height=35, fg_color="transparent", 
+                            border_width=1, border_color="#FF0000", text_color="#FF0000", 
+                            hover_color=("#FFCCCC", "#330000"),
+                            font=ctk.CTkFont(family="Segoe UI", size=13, weight="normal"),
                             command=self.open_folder)
-        btn.grid(row=0, column=1, padx=15, pady=15)
+        btn.grid(row=0, column=1, padx=20, pady=15)
 
     def open_folder(self):
         if self.path and os.path.exists(self.path):
@@ -48,7 +50,7 @@ class LibraryView(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
         header_frame.grid(row=0, column=0, sticky="ew", padx=40, pady=(40, 20))
         
-        title = ctk.CTkLabel(header_frame, text="Biblioteca de Descargas", font=ctk.CTkFont(size=28, weight="bold"))
+        title = ctk.CTkLabel(header_frame, text="Biblioteca de Descargas", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold"))
         title.pack(side="left")
         
         self.clear_btn = ctk.CTkButton(header_frame, text="🗑️ Limpiar", width=100, fg_color="transparent", 

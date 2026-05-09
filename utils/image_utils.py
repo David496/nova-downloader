@@ -20,16 +20,24 @@ def load_image_async(widget, url, size, callback):
             response.raise_for_status()
             img_data = BytesIO(response.content)
             img = Image.open(img_data)
+            img.load()  # Force loading the image data while in the background thread
             
             # We MUST create the CTkImage in the main thread (using widget.after)
-            # to avoid "_tkinter.TclError: image 'pyimageX' doesn't exist"
             def update_ui():
+                if not widget.winfo_exists():
+                    return
+                    
+                ctk_img = None
                 try:
                     ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=size)
-                    callback(ctk_img)
                 except Exception as e:
                     print(f"Error creating CTkImage: {e}")
-                    callback(None)
+                
+                # Execute callback outside of the CTkImage creation try-block
+                try:
+                    callback(ctk_img)
+                except Exception as e:
+                    print(f"Error in image callback: {e}")
             
             widget.after(0, update_ui)
             

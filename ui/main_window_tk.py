@@ -15,7 +15,7 @@ class MainWindow(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         
         # Sidebar
-        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0)
+        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color=("#f0f0f0", "#121212"))
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_rowconfigure(5, weight=1) # spacer
         
@@ -30,25 +30,49 @@ class MainWindow(ctk.CTk):
         self.setup_sidebar()
 
     def setup_sidebar(self):
-        # Logo
-        self.logo_label = ctk.CTkLabel(self.sidebar, text="▶ NOVA", font=ctk.CTkFont(size=24, weight="bold"), text_color="#FF0000")
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(30, 30))
+        # Logo with better font
+        self.logo_label = ctk.CTkLabel(
+            self.sidebar, 
+            text="▶ NOVA", 
+            font=ctk.CTkFont(family="Segoe UI", size=26, weight="bold"), 
+            text_color="#FF0000"
+        )
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(40, 40))
         
-        # Buttons
-        self.btn_home = ctk.CTkButton(self.sidebar, text="Inicio", fg_color="transparent", text_color=("gray10", "gray90"), 
-                                      hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("home"))
-        self.btn_home.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+        # Navigation Buttons with Segoe UI and better spacing
+        nav_font = ctk.CTkFont(family="Segoe UI", size=14, weight="normal")
         
-        self.btn_downloads = ctk.CTkButton(self.sidebar, text="Descargas", fg_color="transparent", text_color=("gray10", "gray90"), 
-                                           hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("downloads"))
-        self.btn_downloads.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
+        self.btn_home = ctk.CTkButton(
+            self.sidebar, text="  Inicio", fg_color="transparent", 
+            text_color=("gray20", "gray85"), hover_color=("gray80", "gray25"), 
+            anchor="w", font=nav_font, height=40, corner_radius=8,
+            command=lambda: self.show_view("home")
+        )
+        self.btn_home.grid(row=1, column=0, padx=15, pady=5, sticky="ew")
         
-        self.btn_library = ctk.CTkButton(self.sidebar, text="Biblioteca", fg_color="transparent", text_color=("gray10", "gray90"), 
-                                         hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("library"))
-        self.btn_library.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
+        self.btn_downloads = ctk.CTkButton(
+            self.sidebar, text="  Descargas", fg_color="transparent", 
+            text_color=("gray20", "gray85"), hover_color=("gray80", "gray25"), 
+            anchor="w", font=nav_font, height=40, corner_radius=8,
+            command=lambda: self.show_view("downloads")
+        )
+        self.btn_downloads.grid(row=2, column=0, padx=15, pady=5, sticky="ew")
         
-        self.btn_settings = ctk.CTkButton(self.sidebar, text="⚙️  Configuración", fg_color="transparent", text_color=("gray10", "gray90"), 
-                                          hover_color=("gray70", "gray30"), anchor="w", font=ctk.CTkFont(size=14), command=lambda: self.show_view("settings"))
+        self.btn_library = ctk.CTkButton(
+            self.sidebar, text="  Biblioteca", fg_color="transparent", 
+            text_color=("gray20", "gray85"), hover_color=("gray80", "gray25"), 
+            anchor="w", font=nav_font, height=40, corner_radius=8,
+            command=lambda: self.show_view("library")
+        )
+        self.btn_library.grid(row=3, column=0, padx=15, pady=5, sticky="ew")
+        
+        self.btn_settings = ctk.CTkButton(
+            self.sidebar, text="  ⚙️  Configuración", fg_color="transparent", 
+            text_color=("gray20", "gray85"), hover_color=("gray80", "gray25"), 
+            anchor="w", font=nav_font, height=40, corner_radius=8,
+            command=lambda: self.show_view("settings")
+        )
+        self.btn_settings.grid(row=4, column=0, padx=15, pady=5, sticky="ew")
         self.btn_settings.grid(row=6, column=0, padx=10, pady=(5, 20), sticky="ew")
 
     def register_view(self, name, view_class, **kwargs):

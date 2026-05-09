@@ -8,11 +8,12 @@ class DownloadRow(ctk.CTkFrame):
     def __init__(self, parent, task):
         super().__init__(parent, fg_color=("gray85", "gray15"), corner_radius=8)
         self.task = task
+        self.current_image = None
         
         self.grid_columnconfigure(1, weight=1)
         
         # Left side: Thumbnail
-        self.thumb_lbl = ctk.CTkLabel(self, text="...", width=120, height=68, fg_color="#212121", corner_radius=6)
+        self.thumb_lbl = ctk.CTkLabel(self, text="...", width=120, height=68, fg_color="#000000", corner_radius=6)
         self.thumb_lbl.grid(row=0, column=0, rowspan=3, padx=15, pady=15, sticky="w")
         
         if task.thumbnail_url:
@@ -23,7 +24,7 @@ class DownloadRow(ctk.CTkFrame):
         top_frame.grid(row=0, column=1, sticky="ew", padx=(0, 15), pady=(15, 0))
         top_frame.grid_columnconfigure(0, weight=1)
         
-        self.title_lbl = ctk.CTkLabel(top_frame, text=task.title, font=ctk.CTkFont(weight="bold"), anchor="w")
+        self.title_lbl = ctk.CTkLabel(top_frame, text=task.title, font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"), anchor="w")
         self.title_lbl.grid(row=0, column=0, sticky="ew")
         
         b_color = "#FF0000" if task.file_type == "Video" else "#555555"
@@ -40,10 +41,10 @@ class DownloadRow(ctk.CTkFrame):
         bottom_frame.grid(row=2, column=1, sticky="ew", padx=(0, 15), pady=(0, 15))
         bottom_frame.grid_columnconfigure(0, weight=1)
         
-        self.status_lbl = ctk.CTkLabel(bottom_frame, text="Iniciando...", text_color="gray", font=ctk.CTkFont(size=11), anchor="w")
+        self.status_lbl = ctk.CTkLabel(bottom_frame, text="Iniciando...", text_color="gray", font=ctk.CTkFont(family="Segoe UI", size=12), anchor="w")
         self.status_lbl.grid(row=0, column=0, sticky="w")
         
-        self.speed_lbl = ctk.CTkLabel(bottom_frame, text="", text_color="gray", font=ctk.CTkFont(size=11), anchor="e")
+        self.speed_lbl = ctk.CTkLabel(bottom_frame, text="", text_color="gray", font=ctk.CTkFont(family="Segoe UI", size=12), anchor="e")
         self.speed_lbl.grid(row=0, column=1, sticky="e")
 
     def on_image_loaded(self, ctk_image):
@@ -51,13 +52,18 @@ class DownloadRow(ctk.CTkFrame):
         
         try:
             if ctk_image:
-                self.current_image = ctk_image
+                # Update label BEFORE replacing self.current_image reference
                 self.thumb_lbl.configure(image=ctk_image, text="")
+                self.current_image = ctk_image
             else:
-                self.thumb_lbl.configure(text="Sin\nImagen")
+                self.thumb_lbl.configure(image=None, text="Sin\nImagen")
+                self.current_image = None
         except Exception as e:
             print(f"Error updating row thumbnail: {e}")
-            self.thumb_lbl.configure(image=None, text="Error")
+            try:
+                self.thumb_lbl.configure(image=None, text="Error")
+            except Exception:
+                pass
 
     def update_progress(self, percent, speed_str, downloaded_str):
         self.progress_bar.set(percent / 100)
@@ -95,11 +101,11 @@ class DownloadsView(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
         header_frame.grid(row=0, column=0, sticky="ew", padx=40, pady=(40, 20))
         
-        title = ctk.CTkLabel(header_frame, text="Cola de Descargas", font=ctk.CTkFont(size=28, weight="bold"))
+        title = ctk.CTkLabel(header_frame, text="Cola de Descargas", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold"))
         title.pack(side="left")
         
         self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self.scroll_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 40))
+        self.scroll_frame.grid(row=1, column=0, sticky="nsew", padx=30, pady=(0, 30))
         
         self.rows = {}
         self.last_update = {}

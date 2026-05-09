@@ -11,34 +11,37 @@ class Badge(ctk.CTkFrame):
 class ToastNotification(ctk.CTkFrame):
     """A toast notification that slides up from the bottom and fades/disappears"""
     def __init__(self, parent, message, duration=3000, **kwargs):
-        super().__init__(parent, fg_color="#212121", border_width=1, border_color="#FF0000", corner_radius=8, **kwargs)
+        super().__init__(parent, fg_color="#1a1a1a", border_width=1, border_color="#FF0000", corner_radius=12, **kwargs)
         self.parent = parent
         self.duration = duration
         
-        self.lbl = ctk.CTkLabel(self, text=message, text_color="white", font=ctk.CTkFont(size=12, weight="bold"))
-        self.lbl.pack(padx=20, pady=10)
+        self.lbl = ctk.CTkLabel(self, text=message, text_color="white", font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"))
+        self.lbl.pack(padx=25, pady=12)
         
-        # We will place it using .place() in the parent (MainWindow)
+        # Force parent update to get correct dimensions
+        self.parent.update_idletasks()
+        
+        # Center horizontally relative to parent
         self.target_y = parent.winfo_height() - 80
-        self.current_y = parent.winfo_height() + 50
-        self.x_pos = parent.winfo_width() - 250
+        self.current_y = parent.winfo_height() + 100
         
-        self.place(x=self.x_pos, y=self.current_y)
+        # Use relx to center it, and anchor="center" to keep it balanced
+        self.place(relx=0.5, y=self.current_y, anchor="center")
         self.animate_in()
 
     def animate_in(self):
         if self.current_y > self.target_y:
-            self.current_y -= 10
-            self.place(x=self.parent.winfo_width() - 250, y=self.current_y)
-            self.after(15, self.animate_in)
+            self.current_y -= 8
+            self.place(relx=0.5, y=self.current_y, anchor="center")
+            self.after(10, self.animate_in)
         else:
             self.after(self.duration, self.animate_out)
 
     def animate_out(self):
-        if self.current_y < self.parent.winfo_height() + 50:
-            self.current_y += 10
-            self.place(x=self.parent.winfo_width() - 250, y=self.current_y)
-            self.after(15, self.animate_out)
+        if self.current_y < self.parent.winfo_height() + 100:
+            self.current_y += 8
+            self.place(relx=0.5, y=self.current_y, anchor="center")
+            self.after(10, self.animate_out)
         else:
             self.destroy()
 

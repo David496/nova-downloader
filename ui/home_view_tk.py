@@ -23,17 +23,17 @@ class HomeView(ctk.CTkFrame):
         title = ctk.CTkLabel(
             self.center_frame,
             text="Descarga contenido de YouTube",
-            font=ctk.CTkFont(size=28, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=32, weight="bold"),
         )
         title.grid(row=0, column=0, pady=(0, 10))
 
         subtitle = ctk.CTkLabel(
             self.center_frame,
-            text="Pega un enlace para comenzar",
-            font=ctk.CTkFont(size=14),
+            text="Pega un enlace para comenzar la descarga",
+            font=ctk.CTkFont(family="Segoe UI", size=15),
             text_color="gray",
         )
-        subtitle.grid(row=1, column=0, pady=(0, 30))
+        subtitle.grid(row=1, column=0, pady=(0, 40))
 
         # Input Frame
         input_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
@@ -44,44 +44,50 @@ class HomeView(ctk.CTkFrame):
         self.url_entry = ctk.CTkEntry(
             input_frame,
             textvariable=self.url_var,
-            height=45,
-            placeholder_text="Pega un enlace de YouTube aquí...",
+            height=50,
+            placeholder_text="https://www.youtube.com/watch?v=...",
+            font=ctk.CTkFont(family="Segoe UI", size=14),
+            border_width=2,
         )
         self.url_entry.grid(row=0, column=0, sticky="ew", padx=(0, 10))
 
         self.analyze_btn = ctk.CTkButton(
             input_frame,
-            text="Buscar",
-            height=45,
-            width=120,
-            font=ctk.CTkFont(weight="bold"),
+            text="Analizar",
+            height=50,
+            width=140,
+            font=ctk.CTkFont(family="Segoe UI", size=15, weight="bold"),
             fg_color="#FF0000",
             hover_color="#CC0000",
+            corner_radius=8,
             command=self.analyze,
         )
         self.analyze_btn.grid(row=0, column=1)
 
         # Loading Container
         self.loading_container = ctk.CTkFrame(self.center_frame, fg_color="transparent")
-        self.loading_container.grid(row=3, column=0, pady=15)
+        self.loading_container.grid(row=3, column=0, pady=25)
         self.loading_spinner = None
 
         self.error_label = ctk.CTkLabel(
-            self.center_frame, text="", text_color="#FF4E4E"
+            self.center_frame, text="", text_color="#FF4E4E",
+            font=ctk.CTkFont(family="Segoe UI", size=13)
         )
-        self.error_label.grid(row=3, column=0, pady=15)
+        self.error_label.grid(row=3, column=0, pady=25)
         self.error_label.grid_remove()
 
         # Results Frame
         self.results_frame = ctk.CTkScrollableFrame(
-            self.center_frame, fg_color="transparent"
+            self.center_frame, fg_color="transparent",
+            label_text="Resultado del análisis",
+            label_font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold")
         )
         self.results_frame.grid(row=4, column=0, sticky="nsew", pady=10)
         self.results_frame.grid_columnconfigure(0, weight=1)
         self.center_frame.grid_rowconfigure(4, weight=1)
 
         # Inner padding for results
-        self.res_inner = ctk.CTkFrame(self.results_frame)
+        self.res_inner = ctk.CTkFrame(self.results_frame, fg_color=("#e5e5e5", "#1e1e1e"), corner_radius=12)
         self.res_inner.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.res_inner.grid_columnconfigure(1, weight=1)
 
@@ -91,7 +97,7 @@ class HomeView(ctk.CTkFrame):
             text="",
             width=240,
             height=135,
-            fg_color="#212121",
+            fg_color="#000000",
             corner_radius=8,
         )
         self.thumb_lbl.grid(row=0, column=0, sticky="nw", padx=20, pady=20)
@@ -105,14 +111,14 @@ class HomeView(ctk.CTkFrame):
         self.title_lbl = ctk.CTkLabel(
             self.info_container,
             textvariable=self.title_var,
-            font=ctk.CTkFont(size=18, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"),
             wraplength=500,
             justify="left",
         )
-        self.title_lbl.grid(row=0, column=0, sticky="nw", pady=(0, 5))
+        self.title_lbl.grid(row=0, column=0, sticky="nw", pady=(0, 8))
 
         self.badges_frame = ctk.CTkFrame(self.info_container, fg_color="transparent")
-        self.badges_frame.grid(row=1, column=0, sticky="w", pady=(0, 15))
+        self.badges_frame.grid(row=1, column=0, sticky="w", pady=(0, 20))
         self.type_badge = Badge(self.badges_frame, text="VIDEO", color="#FF0000")
         self.type_badge.pack(side="left")
 
@@ -123,29 +129,31 @@ class HomeView(ctk.CTkFrame):
             variable=self.playlist_var,
             fg_color="#FF0000",
             hover_color="#CC0000",
+            font=ctk.CTkFont(family="Segoe UI", size=13),
             command=self.toggle_playlist_selection,
         )
-        self.playlist_cb.grid(row=2, column=0, sticky="w", pady=(0, 10))
+        self.playlist_cb.grid(row=2, column=0, sticky="w", pady=(0, 15))
         self.playlist_cb.grid_remove()
 
         self.entries_frame = ctk.CTkFrame(
-            self.info_container, fg_color=("gray85", "gray15")
+            self.info_container, fg_color=("gray90", "gray12"), corner_radius=8
         )
-        self.entries_frame.grid(row=3, column=0, sticky="ew", pady=(0, 15))
+        self.entries_frame.grid(row=3, column=0, sticky="ew", pady=(0, 20))
         self.entries_frame.grid_remove()
 
         self.entry_vars = []
         self.entry_checkboxes = []
+        self.current_image = None
 
         # Qualities
         self.quality_frame = ctk.CTkFrame(self.info_container, fg_color="transparent")
-        self.quality_frame.grid(row=4, column=0, sticky="ew", pady=(0, 20))
+        self.quality_frame.grid(row=4, column=0, sticky="ew", pady=(0, 25))
 
         ctk.CTkLabel(
             self.quality_frame,
             text="Selecciona un formato:",
-            font=ctk.CTkFont(weight="bold"),
-        ).pack(anchor="w", pady=(0, 5))
+            font=ctk.CTkFont(family="Segoe UI", weight="bold", size=14),
+        ).pack(anchor="w", pady=(0, 10))
 
         self.selected_quality = ctk.StringVar(value="")
         self.qualities = {
@@ -237,10 +245,15 @@ class HomeView(ctk.CTkFrame):
         self.entries_frame.grid_remove()
 
         try:
-            self.thumb_lbl.configure(image=None, text="Cargando imagen...")
+            # Try to clear image separately first
+            self.thumb_lbl.configure(image=None)
+            self.thumb_lbl.configure(text="Cargando imagen...")
         except Exception:
             # Fallback if the previous image object is already invalid in Tcl
-            self.thumb_lbl.configure(text="Cargando imagen...")
+            try:
+                self.thumb_lbl.configure(text="Cargando imagen...")
+            except Exception:
+                pass
 
         extractor = InfoExtractor(url, self.on_analyze_success, self.on_analyze_error)
         extractor.start()
@@ -251,13 +264,25 @@ class HomeView(ctk.CTkFrame):
 
         try:
             if ctk_image:
-                self.current_image = ctk_image
+                # Update label BEFORE replacing self.current_image reference
+                # This ensures the old image is still alive in Tcl while the widget updates
                 self.thumb_lbl.configure(image=ctk_image, text="")
+                self.current_image = ctk_image
             else:
-                self.thumb_lbl.configure(text="Sin Imagen")
+                self.thumb_lbl.configure(image=None, text="Sin Imagen")
+                self.current_image = None
         except Exception as e:
             print(f"Error updating thumbnail: {e}")
-            self.thumb_lbl.configure(image=None, text="Error imagen")
+            try:
+                # Try to clear the image to recover the widget state
+                self.thumb_lbl.configure(image=None, text="Error imagen")
+                self.current_image = None
+            except Exception:
+                # If everything fails, just set text
+                try:
+                    self.thumb_lbl.configure(text="Error imagen")
+                except Exception:
+                    pass
 
     def on_analyze_success(self, info):
         def update_ui():
