@@ -1,19 +1,25 @@
 # Nova Downloader
 
-Nova Downloader es una aplicación de escritorio moderna y minimalista para descargar videos y audios de YouTube. Diseñada con una interfaz fluida y elegante inspirada en aplicaciones actuales.
+Nova Downloader es una aplicación de escritorio moderna para descargar videos y audios de múltiples plataformas, potenciada por **Flet (Flutter for Python)**. Ofrece una interfaz fluida, elegante y totalmente asíncrona.
+
+## 🚀 Mejoras de la Versión Final (Flet Async)
+
+- **Motor Asíncrono Real**: La interfaz nunca se congela durante el análisis o la descarga.
+- **Gestión Inteligente de Playlists**: Elige individualmente qué videos de una playlist quieres bajar.
+- **Progreso en Tiempo Real**: Barras de carga fluidas y limpias (sin caracteres extraños).
+- **Interfaz Reactiva**: Cambios instantáneos de tema (Oscuro/Claro) e idioma desde Ajustes.
+- **Visualización Premium**: Miniaturas en alta resolución y metadatos detallados (duración, autor, vistas).
 
 ## Requisitos Previos
 
 - Python 3.12 o superior.
-- **FFmpeg**: Requerido para la conversión de formatos de audio (como MP3, WAV, FLAC) y para combinar pistas de video de alta calidad (como 4K o 1080p).
-  - Si no tienes FFmpeg instalado en Windows, puedes descargarlo usando un gestor de paquetes como `winget`:
+- **FFmpeg**: Requerido para la conversión de formatos de audio y para combinar pistas de video de alta calidad.
+  - Instalación en Windows vía `winget`:
     ```powershell
     winget install ffmpeg
     ```
 
 ## Instalación y Ejecución
-
-Para clonar y configurar este proyecto en una nueva computadora, sigue estos pasos:
 
 1. **Clona el repositorio**:
    ```bash
@@ -21,38 +27,30 @@ Para clonar y configurar este proyecto en una nueva computadora, sigue estos pas
    cd app
    ```
 
-2. **Crea un entorno virtual**:
+2. **Crea y activa un entorno virtual**:
    ```powershell
    python -m venv venv
+   # Activar en Windows:
+   .\venv\Scripts\activate
    ```
 
-3. **Activa el entorno virtual**:
-   - En Windows:
-     ```powershell
-     .\venv\Scripts\activate
-     ```
-   - En macOS/Linux:
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. **Instala las dependencias**:
+3. **Instala las dependencias**:
    ```powershell
    pip install -r requirements.txt
    ```
 
-5. **Ejecuta la aplicación**:
+4. **Ejecuta la aplicación**:
    ```powershell
-   python main.py
+   python main_flet.py
    ```
 
-## Características Principales
+## Características Técnicas
 
-- **Descarga de Video**: Soporta múltiples resoluciones, desde SD (360p) hasta 4K.
-- **Descarga de Audio**: Extracción directa de audio en formatos MP3 (320kbps/192kbps), WAV (Lossless) y FLAC.
-- **Historial Integrado**: Pestaña de biblioteca que guarda el registro local de tus descargas (mediante SQLite), permitiéndote abrir rápidamente las carpetas de destino.
-- **Descargas en Segundo Plano**: Interfaz multihilo que no se congela mientras se descargan o convierten los archivos.
+- **Basado en Flet**: Renderizado de alta fidelidad con Material Design 3.
+- **Arquitectura Async**: Implementación robusta con `asyncio` y `threading`.
+- **Core Potente**: Utiliza `yt-dlp` para máxima compatibilidad.
+- **Historial Local**: Base de datos SQLite para registro de descargas.
 
 ## Notas
 
-- Al descargar formatos de muy alta calidad (como 4K), YouTube entrega el video y el audio por separado. `yt-dlp` los descarga simultáneamente y luego utiliza `ffmpeg` para unirlos. Este proceso de "conversión" puede tomar unos momentos después de que la barra de descarga llegue al 100%.
+Al descargar formatos de alta resolución (como 4K), verás el estado "Procesando archivos..." mientras `ffmpeg` une las pistas de audio y video.
