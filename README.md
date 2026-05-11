@@ -1,6 +1,13 @@
 # Nova Downloader
 
-Nova Downloader es una aplicación de escritorio moderna para descargar videos y audios de múltiples plataformas, potenciada por **Flet (Flutter for Python)**. Ofrece una interfaz fluida, elegante y totalmente asíncrona.
+Nova Downloader es una aplicación de escritorio moderna para descargar videos y audios, potenciada por **Flet (Flutter for Python)**. Ofrece una interfaz fluida, elegante y totalmente asíncrona.
+
+> [!IMPORTANT]
+> **Nota:** Por el momento, la aplicación solo es compatible con la descarga de contenido de **YouTube**.
+
+## ⚠️ Descargo de Responsabilidad (Disclaimer)
+
+Este es un **proyecto puramente educativo y de uso personal**. El software se proporciona "tal cual", sin garantía de ningún tipo. Los desarrolladores no se hacen responsables del uso que los usuarios den a esta herramienta ni del contenido descargado. Asegúrate de cumplir con los términos de servicio de la plataforma y las leyes de derechos de autor de tu país.
 
 ## 🚀 Mejoras de la Versión Final (Flet Async)
 
