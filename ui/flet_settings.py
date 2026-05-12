@@ -1,6 +1,5 @@
 import flet as ft
 from core.config import config, save_config
-import os
 import tkinter as tk
 from tkinter import filedialog
 from ui.flet_styles import AppEvents

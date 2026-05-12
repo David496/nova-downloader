@@ -1,7 +1,6 @@
 import flet as ft
 import database.db as db
 import os
-from ui.flet_styles import AppEvents
 from core.config import config
 
 class LibraryView(ft.Column):
@@ -89,8 +88,11 @@ class LibraryView(ft.Column):
         )
 
     def open_folder(self, path):
-        if path and os.path.exists(os.path.dirname(path)):
-            os.startfile(os.path.dirname(path))
+        if path and os.path.exists(path):
+            if os.path.isdir(path):
+                os.startfile(path)
+            else:
+                os.startfile(os.path.dirname(path))
 
     def delete_item(self, item_id):
         db.delete_from_history(item_id)

@@ -2,7 +2,6 @@ import flet as ft
 import database.db as db
 import re
 import asyncio
-from ui.flet_styles import AppEvents
 from core.config import config
 
 class DownloadItem(ft.Container):
@@ -104,9 +103,7 @@ class DownloadsView(ft.Column):
         self.controls.extend([self.title_label, self.list_container])
 
     def on_progress(self, task, d):
-        # This is called from the loop thread via call_soon_threadsafe
-        # We need to run the async update
-        asyncio.run_coroutine_threadsafe(self._on_progress_async(task, d), self.page.loop)
+        asyncio.create_task(self._on_progress_async(task, d))
 
     async def _on_progress_async(self, task, d):
         if task.task_id not in self.items:
@@ -121,7 +118,7 @@ class DownloadsView(ft.Column):
         await self.items[task.task_id].update_progress_async(d)
 
     def on_finished(self, task, info):
-        asyncio.run_coroutine_threadsafe(self._on_finished_async(task, info), self.page.loop)
+        asyncio.create_task(self._on_finished_async(task, info))
 
     async def _on_finished_async(self, task, info):
         if task.task_id in self.items:
@@ -137,7 +134,7 @@ class DownloadsView(ft.Column):
         )
 
     def on_error(self, task, err):
-        asyncio.run_coroutine_threadsafe(self._on_error_async(task, err), self.page.loop)
+        asyncio.create_task(self._on_error_async(task, err))
 
     async def _on_error_async(self, task, err):
         if task.task_id in self.items:

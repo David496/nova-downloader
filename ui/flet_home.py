@@ -2,7 +2,6 @@ import flet as ft
 from services.downloader import InfoExtractor
 from core.config import config
 import os
-from ui.flet_styles import AppEvents
 
 class FormatCard(ft.Container):
     def __init__(self, f_type, label, desc, options, on_click):
@@ -299,7 +298,7 @@ class HomeView(ft.Column):
         self.audio_list.controls.clear()
         self.selected_card = None
         self.download_btn.disabled = True
-        lang = config.get("language", "es")
+        config.get("language", "es")
 
         video_qualities = [
             ("4K Ultra HD", "Calidad máxima (2160p)", {'format': 'bestvideo[height<=2160][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'}),

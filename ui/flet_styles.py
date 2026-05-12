@@ -1,5 +1,4 @@
 import flet as ft
-from core.config import config, save_config
 
 class AppEvents:
     """Global event bus for UI updates."""
