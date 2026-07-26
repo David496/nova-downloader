@@ -10,24 +10,32 @@ class DownloadItem(ft.Container):
         self.task = task
         self.task_id = task.task_id
         
-        self.title_text = ft.Text(task.title, weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
-        self.status_text = ft.Text("En cola..." if config.get("language") == "es" else "Queued...", size=12, color=ft.Colors.GREY_400)
-        self.progress_bar = ft.ProgressBar(value=0, height=10, border_radius=5, color=ft.Colors.PURPLE_400, bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE))
-        self.percentage_text = ft.Text("0%", size=12, weight=ft.FontWeight.W_600)
+        is_audio = task.file_type == "audio"
+        icon_type = ft.Icons.MUSIC_NOTE_ROUNDED if is_audio else ft.Icons.VIDEO_LIBRARY_ROUNDED
+        icon_color = ft.Colors.PURPLE_300 if is_audio else ft.Colors.AMBER_300
+
+        self.title_text = ft.Text(task.title, weight=ft.FontWeight.BOLD, size=14, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
+        self.status_text = ft.Text("En cola..." if config.get("language") == "es" else "Queued...", size=11, color=ft.Colors.GREY_400)
+        self.progress_bar = ft.ProgressBar(value=0, height=6, border_radius=3, color=ft.Colors.PURPLE_400, bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
+        self.percentage_text = ft.Text("0%", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300)
         
         self.content = ft.Column(
             [
-                self.title_text,
-                ft.Row([self.status_text, ft.Container(expand=True), self.percentage_text]),
-                self.progress_bar
+                ft.Row([
+                    ft.Icon(icon_type, color=icon_color, size=18),
+                    ft.Container(content=self.title_text, expand=True),
+                    self.percentage_text
+                ], spacing=8),
+                self.progress_bar,
+                ft.Row([self.status_text]),
             ],
-            spacing=8
+            spacing=6
         )
-        self.padding = 20
-        self.bgcolor = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
-        self.border_radius = 15
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE))
-        self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)
+        self.padding = ft.Padding(14, 10, 14, 10)
+        self.bgcolor = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
+        self.border_radius = 12
+        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
+        self.animate = ft.Animation(200, ft.AnimationCurve.DECELERATE)
 
     async def update_progress_async(self, d):
         if d['status'] == 'queued':
@@ -35,7 +43,7 @@ class DownloadItem(ft.Container):
             self.progress_bar.value = 0
         elif d['status'] == 'playlist_progress':
             self.status_text.value = d.get('msg', 'Bajando playlist...')
-            self.progress_bar.value = None # Indeterminate
+            self.progress_bar.value = None
         elif d['status'] == 'downloading':
             p_raw = d.get('_percent_str', '0%')
             p_clean = re.sub(r'\x1b[^m]*m', '', p_raw).replace('%', '').strip()
@@ -48,11 +56,17 @@ class DownloadItem(ft.Container):
                 pass
                 
             speed = re.sub(r'\x1b[^m]*m', '', d.get('_speed_str', '')).strip()
-            self.status_text.value = f"Descargando... {speed}" if config.get("language") == "es" else f"Downloading... {speed}"
+            eta = re.sub(r'\x1b[^m]*m', '', d.get('_eta_str', '')).strip()
+            extra = f" • {speed}" if speed else ""
+            if eta:
+                extra += f" • ETA {eta}"
+            
+            lang = config.get("language", "es")
+            self.status_text.value = f"Descargando{extra}" if lang == "es" else f"Downloading{extra}"
             
         elif d['status'] == 'converting':
             self.progress_bar.value = None
-            self.status_text.value = "Procesando archivos..." if config.get("language") == "es" else "Processing files..."
+            self.status_text.value = "Procesando archivos y metadatos..." if config.get("language") == "es" else "Processing files & metadata..."
         
         try:
             self.update()
@@ -62,7 +76,8 @@ class DownloadItem(ft.Container):
     async def set_finished_async(self):
         self.progress_bar.value = 1
         self.percentage_text.value = "100%"
-        self.status_text.value = "Completado" if config.get("language") == "es" else "Finished"
+        self.percentage_text.color = ft.Colors.GREEN_400
+        self.status_text.value = "Completado ✓" if config.get("language") == "es" else "Finished ✓"
         self.status_text.color = ft.Colors.GREEN_400
         self.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.GREEN_400))
         try:
@@ -84,8 +99,8 @@ class DownloadsView(ft.Column):
     def __init__(self):
         super().__init__()
         self.expand = True
-        self.spacing = 20
-        self.padding = ft.Padding.all(30)
+        self.spacing = 15
+        self.padding = ft.Padding.all(20)
         self.scroll = ft.ScrollMode.AUTO
         self.items = {} # task_id -> DownloadItem
         self._build_ui()
@@ -94,11 +109,25 @@ class DownloadsView(ft.Column):
         self.controls.clear()
         lang = config.get("language", "es")
         
-        self.title_label = ft.Text("Descargas Activas" if lang == "es" else "Active Downloads", size=28, weight=ft.FontWeight.BOLD)
-        self.list_container = ft.Column(spacing=15)
+        self.title_label = ft.Text("Descargas Activas" if lang == "es" else "Active Downloads", size=24, weight=ft.FontWeight.BOLD)
+        self.list_container = ft.Column(spacing=12)
         
-        for item in self.items.values():
-            self.list_container.controls.append(item)
+        if not self.items:
+            self.empty_card = ft.Container(
+                content=ft.Column([
+                    ft.Icon(ft.Icons.DOWNLOAD_DONE_ROUNDED, size=55, color=ft.Colors.with_opacity(0.3, ft.Colors.WHITE)),
+                    ft.Text("No hay descargas activas en este momento" if lang == "es" else "No active downloads right now", size=16, color=ft.Colors.GREY_400),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
+                alignment=ft.Alignment.CENTER,
+                padding=60,
+                bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.WHITE),
+                border_radius=20,
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.05, ft.Colors.WHITE))
+            )
+            self.list_container.controls.append(self.empty_card)
+        else:
+            for item in self.items.values():
+                self.list_container.controls.append(item)
             
         self.controls.extend([self.title_label, self.list_container])
 
@@ -106,6 +135,9 @@ class DownloadsView(ft.Column):
         asyncio.create_task(self._on_progress_async(task, d))
 
     async def _on_progress_async(self, task, d):
+        if hasattr(self, 'empty_card') and self.empty_card in self.list_container.controls:
+            self.list_container.controls.remove(self.empty_card)
+
         if task.task_id not in self.items:
             item = DownloadItem(task)
             self.items[task.task_id] = item
@@ -121,11 +153,19 @@ class DownloadsView(ft.Column):
         asyncio.create_task(self._on_finished_async(task, info))
 
     async def _on_finished_async(self, task, info):
-        if task.task_id in self.items:
-            await self.items[task.task_id].set_finished_async()
+        item = self.items.get(task.task_id)
+        if not item:
+            target_title = info.get('title') or task.title
+            for it in self.items.values():
+                if it.task.title == target_title or it.task.title == task.title or "Procesando" in str(it.status_text.value):
+                    item = it
+                    break
+
+        if item:
+            await item.set_finished_async()
             
         db.add_download(
-            title=task.title,
+            title=info.get('title') or task.title,
             url=task.url,
             file_type=task.file_type,
             quality=task.options.get('format', 'N/A'),
@@ -137,5 +177,11 @@ class DownloadsView(ft.Column):
         asyncio.create_task(self._on_error_async(task, err))
 
     async def _on_error_async(self, task, err):
-        if task.task_id in self.items:
-            await self.items[task.task_id].set_error_async(err)
+        item = self.items.get(task.task_id)
+        if not item:
+            for it in self.items.values():
+                if "Procesando" in str(it.status_text.value) or "Descargando" in str(it.status_text.value):
+                    item = it
+                    break
+        if item:
+            await item.set_error_async(err)

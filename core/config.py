@@ -6,7 +6,8 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config.json")
 DEFAULT_CONFIG = {
     "theme": "dark",
     "language": "es",
-    "download_dir": os.path.expanduser("~/Downloads")
+    "download_dir": os.path.expanduser("~/Downloads"),
+    "embed_metadata": True
 }
 
 def load_config():

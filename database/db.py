@@ -19,12 +19,31 @@ def init_db():
             path TEXT
         )
     ''')
+    # Clean up existing duplicates from database
+    cursor.execute('''
+        DELETE FROM downloads 
+        WHERE id NOT IN (
+            SELECT MIN(id) 
+            FROM downloads 
+            GROUP BY title, path
+        )
+    ''')
     conn.commit()
     conn.close()
 
 def add_download(title, url, file_type, quality, size, path):
+    if not title or not path:
+        return
+        
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Check if entry with same title and path already exists
+    cursor.execute('SELECT id FROM downloads WHERE title = ? AND path = ?', (title, path))
+    if cursor.fetchone():
+        conn.close()
+        return
+
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute('''
         INSERT INTO downloads (title, url, file_type, quality, date, size, path)

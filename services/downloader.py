@@ -4,6 +4,7 @@ import threading
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from core.config import config
 
 class DownloadTask:
     def __init__(self, url, options, output_path, title, file_type, task_id, thumbnail_url=None):
@@ -47,6 +48,7 @@ class DownloadManager:
 
     async def _process_task(self, task):
         self.current_parent_task = task
+        self.current_sub_task = None
         ydl_opts = {
             'outtmpl': os.path.join(task.output_path, '%(title)s.%(ext)s'),
             'progress_hooks': [self._progress_hook],
@@ -62,25 +64,79 @@ class DownloadManager:
             
         ydl_opts.update(task_options)
 
+        # Enforce metadata & thumbnail embedding for audio tasks if enabled in settings
+        if task.file_type == "audio" and config.get("embed_metadata", True):
+            pps = list(ydl_opts.get('postprocessors', []))
+            
+            # Check codec
+            extract_pp = next((p for p in pps if p.get('key') == 'FFmpegExtractAudio'), None)
+            codec = extract_pp.get('preferredcodec') if extract_pp else 'mp3'
+
+            if not any(p.get('key') == 'FFmpegMetadata' for p in pps):
+                pps.append({'key': 'FFmpegMetadata', 'add_metadata': True})
+                
+            if codec in ['mp3', 'm4a', 'flac', 'aac', 'm4b']:
+                ydl_opts['writethumbnail'] = True
+                if not any(p.get('key') == 'EmbedThumbnail' for p in pps):
+                    pps.append({'key': 'EmbedThumbnail', 'already_have_thumbnail': False})
+                    
+            ydl_opts['postprocessors'] = pps
+
         # Run yt-dlp in a thread to not block the event loop
         with ThreadPoolExecutor() as executor:
             await self._loop.run_in_executor(executor, self._run_ydl, task, ydl_opts)
+
+    def _get_final_path(self, info, ydl, task):
+        if info.get('_type') == 'playlist':
+            return task.output_path
+        
+        prep_path = ydl.prepare_filename(info)
+        reqs = info.get('_requested_downloads', [])
+        if reqs and reqs[0].get('filepath'):
+            if os.path.exists(reqs[0]['filepath']):
+                return reqs[0]['filepath']
+                
+        if os.path.exists(prep_path):
+            return prep_path
+            
+        base, _ = os.path.splitext(prep_path)
+        for ext in ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg', '.mp4']:
+            candidate = base + ext
+            if os.path.exists(candidate):
+                return candidate
+                
+        return prep_path
 
     def _run_ydl(self, task, ydl_opts):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(task.url, download=True)
+                target_task = self.current_sub_task if self.current_sub_task else task
                 if info:
-                    # Notify UI that the main task (or playlist) is done
-                    self._loop.call_soon_threadsafe(self.finished_cb, task, {
-                        'title': info.get('title'), 
-                        'ext': info.get('ext'), 
-                        'path': ydl.prepare_filename(info) if info.get('_type') != 'playlist' else task.output_path
-                    })
+                    if info.get('_type') == 'playlist':
+                        entries = info.get('entries', [])
+                        for entry in entries:
+                            if entry:
+                                final_path = self._get_final_path(entry, ydl, task)
+                                title = entry.get('title', task.title)
+                                self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
+                                    'title': title,
+                                    'ext': entry.get('ext'),
+                                    'path': final_path
+                                })
+                    else:
+                        final_path = self._get_final_path(info, ydl, task)
+                        title = info.get('title') or task.title
+                        self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
+                            'title': title, 
+                            'ext': info.get('ext'), 
+                            'path': final_path
+                        })
                 else:
-                    self._loop.call_soon_threadsafe(self.error_cb, task, "Error o elemento saltado.")
+                    self._loop.call_soon_threadsafe(self.error_cb, target_task, "Error o elemento saltado.")
         except Exception as e:
-            self._loop.call_soon_threadsafe(self.error_cb, task, str(e))
+            target_task = self.current_sub_task if self.current_sub_task else task
+            self._loop.call_soon_threadsafe(self.error_cb, target_task, str(e))
 
     def _progress_hook(self, d):
         if self._stop_event.is_set():
@@ -112,7 +168,6 @@ class DownloadManager:
             self._loop.call_soon_threadsafe(self.progress_cb, self.current_sub_task, d)
         elif d['status'] == 'finished':
             self._loop.call_soon_threadsafe(self.progress_cb, self.current_sub_task, {'status': 'converting', 'filename': d.get('filename')})
-            self._loop.call_soon_threadsafe(self.finished_cb, self.current_sub_task, {'title': current_title, 'path': d.get('filename')})
 
 class InfoExtractor:
     @staticmethod

@@ -15,26 +15,26 @@ class FormatCard(ft.Container):
         
         self.content = ft.Row(
             [
-                ft.Icon(icon, color=ft.Colors.PURPLE_400, size=24),
+                ft.Icon(icon, color=ft.Colors.PURPLE_400, size=20),
                 ft.Column(
                     [
-                        ft.Text(label, weight=ft.FontWeight.BOLD, size=15),
-                        ft.Text(desc, size=12, color=ft.Colors.GREY_400),
+                        ft.Text(label, weight=ft.FontWeight.BOLD, size=13),
+                        ft.Text(desc, size=11, color=ft.Colors.GREY_400),
                     ],
                     spacing=0,
                     expand=True,
                 ),
-                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.PURPLE_400, size=20, visible=False)
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.PURPLE_400, size=18, visible=False)
             ],
             alignment=ft.MainAxisAlignment.START,
-            spacing=15
+            spacing=12
         )
-        self.padding = ft.Padding(20, 12, 20, 12)
-        self.border_radius = 12
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE))
+        self.padding = ft.Padding(14, 8, 14, 8)
+        self.border_radius = 10
+        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
         self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
         self.on_click = self._handle_click
-        self.animate = ft.Animation(200, ft.AnimationCurve.EASE_OUT)
+        self.animate = ft.Animation(180, ft.AnimationCurve.EASE_OUT)
 
     async def _handle_click(self, e):
         await self.on_click_callback(self)
@@ -64,7 +64,7 @@ class HomeView(ft.Column):
         
         self.expand = True
         self.scroll = ft.ScrollMode.AUTO
-        self.spacing = 30
+        self.spacing = 18
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self._build_ui()
 
@@ -76,55 +76,69 @@ class HomeView(ft.Column):
         self.controls.append(
             ft.Container(
                 content=ft.Column([
-                    ft.Text("Nova Downloader", size=55, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_400),
-                    ft.Text("La forma más rápida y elegante de bajar contenido" if lang == "es" else "The fastest and most elegant way to download content", size=18, color=ft.Colors.GREY_400),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                margin=ft.Margin(0, 50, 0, 10)
+                    ft.Text("Nova Downloader", size=34, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_400),
+                    ft.Text("La forma más rápida y elegante de bajar contenido" if lang == "es" else "The fastest and most elegant way to download content", size=13, color=ft.Colors.GREY_400),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                margin=ft.Margin(0, 15, 0, 5)
             )
         )
 
         # Input Section
         self.url_input = ft.TextField(
             hint_text="Pega un enlace aquí (YouTube, etc...)" if lang == "es" else "Paste a link here (YouTube, etc...)",
-            border_radius=15,
-            height=65,
-            text_size=16,
+            border_radius=12,
+            height=50,
+            text_size=14,
             expand=True,
             border_color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
             focused_border_color=ft.Colors.PURPLE_400,
-            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
             on_submit=self.on_analyze,
             prefix_icon=ft.Icons.LINK_ROUNDED,
-            content_padding=ft.Padding(20, 0, 20, 0)
+            content_padding=ft.Padding(15, 0, 15, 0)
         )
         
         self.analyze_btn = ft.ElevatedButton(
             "Analizar" if lang == "es" else "Analyze",
-            height=65,
-            width=160,
+            height=50,
+            width=130,
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=15),
+                shape=ft.RoundedRectangleBorder(radius=12),
                 bgcolor=ft.Colors.PURPLE_600,
                 color=ft.Colors.WHITE,
             ),
             on_click=self.on_analyze
         )
 
+        self.paste_btn = ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.CONTENT_PASTE_ROUNDED,
+                icon_color=ft.Colors.PURPLE_300,
+                tooltip="Pegar desde el portapapeles" if lang == "es" else "Paste from clipboard",
+                on_click=self.on_paste
+            ),
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+            border_radius=12,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
+            height=50,
+            alignment=ft.Alignment.CENTER
+        )
+
         self.controls.append(
-            ft.Row([self.url_input, self.analyze_btn], spacing=15, alignment=ft.MainAxisAlignment.CENTER)
+            ft.Row([self.url_input, self.paste_btn, self.analyze_btn], spacing=10, alignment=ft.MainAxisAlignment.CENTER)
         )
 
         # Status & Loading
-        self.status_text = ft.Text("", size=14, color=ft.Colors.PURPLE_200)
-        self.progress_ring = ft.ProgressRing(visible=False, width=24, height=24, stroke_width=3, color=ft.Colors.PURPLE_400)
+        self.status_text = ft.Text("", size=13, color=ft.Colors.PURPLE_200)
+        self.progress_ring = ft.ProgressRing(visible=False, width=20, height=20, stroke_width=2.5, color=ft.Colors.PURPLE_400)
         self.controls.append(ft.Row([self.progress_ring, self.status_text], alignment=ft.MainAxisAlignment.CENTER))
 
         # Results Area
-        self.results_container = ft.Column(visible=False, spacing=30, horizontal_alignment=ft.CrossAxisAlignment.START)
+        self.results_container = ft.Column(visible=False, spacing=20, horizontal_alignment=ft.CrossAxisAlignment.START)
         
-        self.info_title = ft.Text("Título del Video", size=24, weight=ft.FontWeight.BOLD, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)
-        self.info_meta = ft.Text("", size=14, color=ft.Colors.GREY_400)
-        self.thumbnail = ft.Image(src="", width=360, height=200, border_radius=15, fit=ft.BoxFit.COVER, visible=False)
+        self.info_title = ft.Text("Título del Video", size=20, weight=ft.FontWeight.BOLD, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)
+        self.info_meta = ft.Text("", size=13, color=ft.Colors.GREY_400)
+        self.thumbnail = ft.Image(src="", width=260, height=145, border_radius=12, fit=ft.BoxFit.COVER, visible=False)
         
         self.playlist_checkbox = ft.Checkbox(
             label="Descargar Playlist Completa" if lang == "es" else "Download Entire Playlist", 
@@ -134,22 +148,22 @@ class HomeView(ft.Column):
         )
         
         self.playlist_items_container = ft.Column(visible=False, spacing=10)
-        self.playlist_items_list = ft.ListView(expand=True, spacing=5, height=250)
+        self.playlist_items_list = ft.ListView(expand=True, spacing=5, height=200)
         
-        self.format_sections = ft.Column(spacing=20)
-        self.video_list = ft.Column(spacing=10)
-        self.audio_list = ft.Column(spacing=10)
+        self.format_sections = ft.Column(spacing=15)
+        self.video_list = ft.Column(spacing=8)
+        self.audio_list = ft.Column(spacing=8)
         
         self.download_btn = ft.ElevatedButton(
             "Descargar Ahora" if lang == "es" else "Download Now",
             disabled=True,
-            height=65,
-            width=260,
+            height=50,
+            width=220,
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=18),
+                shape=ft.RoundedRectangleBorder(radius=14),
                 bgcolor={ft.ControlState.DEFAULT: ft.Colors.PURPLE_700, ft.ControlState.DISABLED: ft.Colors.with_opacity(0.1, ft.Colors.WHITE)},
                 color=ft.Colors.WHITE,
-                elevation=10
+                elevation=6
             ),
             on_click=self.on_download
         )
@@ -207,6 +221,36 @@ class HomeView(ft.Column):
             self.update()
         except:
             pass
+
+    def get_clipboard_text(self):
+        if hasattr(self.page, "get_clipboard"):
+            try:
+                res = self.page.get_clipboard()
+                if res: return res.strip()
+            except:
+                pass
+        try:
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            val = root.clipboard_get()
+            root.destroy()
+            return val.strip() if val else ""
+        except Exception:
+            return ""
+
+    async def on_paste(self, e):
+        try:
+            val = self.get_clipboard_text()
+            if val:
+                self.url_input.value = val
+                try:
+                    self.update()
+                except:
+                    pass
+        except Exception as ex:
+            print(f"Paste error: {ex}")
 
     async def on_analyze(self, e):
         url = self.url_input.value.strip()
@@ -307,10 +351,39 @@ class HomeView(ft.Column):
             ("480p / 360p", "Ahorro de datos", {'format': 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'}),
         ]
         
+        embed_meta = config.get("embed_metadata", True)
+        
+        mp3_high_pps = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '320'}]
+        mp3_std_pps = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
+        m4a_pps = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'm4a'}]
+        wav_pps = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'}]
+        
+        if embed_meta:
+            mp3_high_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
+            mp3_std_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
+            m4a_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
+            wav_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}])
+
         audio_qualities = [
-            ("MP3 Alta Fidelidad", "320kbps - Calidad CD", {'format': 'bestaudio/best', 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '320'}]}),
-            ("MP3 Estándar", "192kbps - Recomendado", {'format': 'bestaudio/best', 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]}),
-            ("Formato WAV", "Sin compresión (Peso alto)", {'format': 'bestaudio/best', 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'}]}),
+            ("MP3 Alta Fidelidad", "320kbps - Con portada y metadatos" if embed_meta else "320kbps - Calidad CD", {
+                'format': 'bestaudio/best',
+                'writethumbnail': embed_meta,
+                'postprocessors': mp3_high_pps
+            }),
+            ("MP3 Estándar", "192kbps - Recomendado", {
+                'format': 'bestaudio/best',
+                'writethumbnail': embed_meta,
+                'postprocessors': mp3_std_pps
+            }),
+            ("M4A / AAC", "Formato de audio ligero", {
+                'format': 'bestaudio/best',
+                'writethumbnail': embed_meta,
+                'postprocessors': m4a_pps
+            }),
+            ("Formato WAV", "Sin compresión (Peso alto)", {
+                'format': 'bestaudio/best',
+                'postprocessors': wav_pps
+            }),
         ]
 
         for label, desc, opts in video_qualities:

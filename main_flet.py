@@ -41,10 +41,10 @@ async def main(page: ft.Page):
     theme_init = config.get("theme", "dark")
     page.theme_mode = ft.ThemeMode.DARK if theme_init == "dark" else ft.ThemeMode.LIGHT
     page.theme = get_theme(theme_init)
-    page.window_width = 1300
-    page.window_height = 900
-    page.window_min_width = 1100
-    page.window_min_height = 750
+    page.window_width = 1250
+    page.window_height = 820
+    page.window_min_width = 1050
+    page.window_min_height = 680
     page.padding = 0
     
     colors_init = AppColors(theme_init == "dark")
@@ -71,9 +71,9 @@ async def main(page: ft.Page):
     content_container = ft.Container(
         content=views[0], 
         expand=True, 
-        padding=ft.Padding(40, 20, 40, 20),
+        padding=ft.Padding(25, 15, 25, 15),
         bgcolor=colors_init.BG_MAIN,
-        animate=ft.Animation(400, ft.AnimationCurve.DECELERATE)
+        animate=ft.Animation(250, ft.AnimationCurve.DECELERATE)
     )
 
     def navigate(index):
@@ -86,15 +86,29 @@ async def main(page: ft.Page):
     rail = ft.NavigationRail(
         selected_index=0,
         extended=True,
-        min_width=100,
-        min_extended_width=220,
-        group_alignment=-0.9,
+        min_width=90,
+        min_extended_width=200,
+        group_alignment=-0.95,
         bgcolor=colors_init.BG_SIDEBAR,
+        leading=ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.DOWNLOAD_FOR_OFFLINE_ROUNDED, color=ft.Colors.PURPLE_400, size=24),
+                ft.Text("NOVA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+            ], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
+            padding=ft.Padding(0, 15, 0, 10)
+        ),
+        trailing=ft.Container(
+            content=ft.Column([
+                ft.Text("Desarrollado por", size=10, color=ft.Colors.GREY_500),
+                ft.Text("David496", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300)
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+            padding=ft.Padding(0, 0, 0, 15)
+        ),
         destinations=[
-            ft.NavigationRailDestination(icon=ft.Icons.HOME_OUTLINED, selected_icon=ft.Icons.HOME, label="Inicio"),
-            ft.NavigationRailDestination(icon=ft.Icons.DOWNLOAD_OUTLINED, selected_icon=ft.Icons.DOWNLOAD, label="Descargas"),
-            ft.NavigationRailDestination(icon=ft.Icons.LIBRARY_BOOKS_OUTLINED, selected_icon=ft.Icons.LIBRARY_BOOKS, label="Biblioteca"),
-            ft.NavigationRailDestination(icon=ft.Icons.SETTINGS_OUTLINED, selected_icon=ft.Icons.SETTINGS, label="Ajustes"),
+            ft.NavigationRailDestination(icon=ft.Icons.HOME_OUTLINED, selected_icon=ft.Icons.HOME_ROUNDED, label="Inicio"),
+            ft.NavigationRailDestination(icon=ft.Icons.DOWNLOAD_OUTLINED, selected_icon=ft.Icons.DOWNLOAD_ROUNDED, label="Descargas"),
+            ft.NavigationRailDestination(icon=ft.Icons.VIDEO_LIBRARY_OUTLINED, selected_icon=ft.Icons.VIDEO_LIBRARY_ROUNDED, label="Biblioteca"),
+            ft.NavigationRailDestination(icon=ft.Icons.SETTINGS_OUTLINED, selected_icon=ft.Icons.SETTINGS_ROUNDED, label="Ajustes"),
         ],
         on_change=lambda e: navigate(e.control.selected_index),
     )
@@ -103,7 +117,7 @@ async def main(page: ft.Page):
         ft.Row(
             [
                 rail,
-                ft.VerticalDivider(width=1, color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
+                ft.VerticalDivider(width=1, color=ft.Colors.with_opacity(0.08, ft.Colors.WHITE)),
                 content_container,
             ],
             expand=True,
