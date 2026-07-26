@@ -1,32 +1,44 @@
 # Nova Downloader
 
-Nova Downloader es una aplicación de escritorio moderna para descargar videos y audios, potenciada por **Flet (Flutter for Python)**. Ofrece una interfaz fluida, elegante y totalmente asíncrona.
+Nova Downloader es una aplicación de escritorio moderna y elegante para descargar videos y música en alta calidad, desarrollada en Python utilizando **Flet** y **yt-dlp**. Ofrece una interfaz fluida, intuitiva, compacta y totalmente asíncrona.
 
-> [!IMPORTANT]
-> **Nota:** Por el momento, la aplicación solo es compatible con la descarga de contenido de **YouTube**.
+> **Desarrollado por David496**
+
+---
+
+## 🚀 Características Principales
+
+- **Descarga de Música con Portada y Metadatos**: Incrusta automáticamente la portada del álbum (cover art) y etiquetas ID3 (título, artista, año) en archivos MP3 y M4A/AAC.
+- **Soporte para Subtítulos**: Descarga e incrusta subtítulos dentro del video MP4 (`FFmpegEmbedSubtitle`) o guárdalos como archivos independientes `.srt`. Soporta múltiples idiomas (`es`, `en`, etc.).
+- **Biblioteca en Lista Vertical**: Historial de descargas organizado en lista con:
+  - Búsqueda en tiempo real por título o URL.
+  - Filtros por tipo (**Música**, **Videos**, **Todos**).
+  - Acciones rápidas para **reproducir/abrir archivo**, **abrir carpeta** o **eliminar del historial**.
+- **Pegar enlace con 1 Clic**: Botón para pegar URLs directamente desde el portapapeles.
+- **Gestión Inteligente de Playlists**: Selecciona individualmente qué elementos de una lista quieres descargar.
+- **Motor Asíncrono Real**: La interfaz nunca se bloquea durante el análisis, descarga o conversión con FFmpeg.
+- **Diseño Compacto y Personalizable**: Cambio de tema (Oscuro/Claro) e idioma (Español/Inglés) desde el panel de Configuración.
+
+---
 
 ## ⚠️ Descargo de Responsabilidad (Disclaimer)
 
 Este es un **proyecto puramente educativo y de uso personal**. El software se proporciona "tal cual", sin garantía de ningún tipo. Los desarrolladores no se hacen responsables del uso que los usuarios den a esta herramienta ni del contenido descargado. Asegúrate de cumplir con los términos de servicio de la plataforma y las leyes de derechos de autor de tu país.
 
-## 🚀 Mejoras de la Versión Final (Flet Async)
+---
 
-- **Motor Asíncrono Real**: La interfaz nunca se congela durante el análisis o la descarga.
-- **Gestión Inteligente de Playlists**: Elige individualmente qué videos de una playlist quieres bajar.
-- **Progreso en Tiempo Real**: Barras de carga fluidas y limpias (sin caracteres extraños).
-- **Interfaz Reactiva**: Cambios instantáneos de tema (Oscuro/Claro) e idioma desde Ajustes.
-- **Visualización Premium**: Miniaturas en alta resolución y metadatos detallados (duración, autor, vistas).
+## 🛠️ Requisitos Previos
 
-## Requisitos Previos
-
-- Python 3.12 o superior.
-- **FFmpeg**: Requerido para la conversión de formatos de audio y para combinar pistas de video de alta calidad.
+- **Python 3.10** o superior.
+- **FFmpeg**: Requerido para la conversión de audio, incrustación de portadas/subtítulos y combinación de pistas 4K/HD.
   - Instalación en Windows vía `winget`:
     ```powershell
     winget install ffmpeg
     ```
 
-## Instalación y Ejecución
+---
+
+## 📦 Instalación y Ejecución
 
 1. **Clona el repositorio**:
    ```bash
@@ -37,7 +49,7 @@ Este es un **proyecto puramente educativo y de uso personal**. El software se pr
 2. **Crea y activa un entorno virtual**:
    ```powershell
    python -m venv venv
-   # Activar en Windows:
+   # En Windows (PowerShell):
    .\venv\Scripts\activate
    ```
 
@@ -51,13 +63,17 @@ Este es un **proyecto puramente educativo y de uso personal**. El software se pr
    python main_flet.py
    ```
 
-## Características Técnicas
+---
 
-- **Basado en Flet**: Renderizado de alta fidelidad con Material Design 3.
-- **Arquitectura Async**: Implementación robusta con `asyncio` y `threading`.
-- **Core Potente**: Utiliza `yt-dlp` para máxima compatibilidad.
-- **Historial Local**: Base de datos SQLite para registro de descargas.
+## 🏗️ Arquitectura Técnica
 
-## Notas
+- **Frontend / UI**: [Flet](https://flet.dev/) (Flutter renderizado en Python).
+- **Core de Descargas**: [yt-dlp](https://github.com/yt-dlp/yt-dlp) + [FFmpeg](https://ffmpeg.org/).
+- **Base de Datos**: SQLite (`history.db`) con deduplicación automática de registros.
+- **Procesamiento de Imágenes**: Pillow (conversión de formatos de portada).
 
-Al descargar formatos de alta resolución (como 4K), verás el estado "Procesando archivos..." mientras `ffmpeg` une las pistas de audio y video.
+---
+
+## 👤 Créditos
+
+Desarrollado por **David496**.

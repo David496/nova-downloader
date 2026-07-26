@@ -82,6 +82,21 @@ class DownloadManager:
                     
             ydl_opts['postprocessors'] = pps
 
+        # Enforce subtitles downloading/embedding if enabled in settings (ONLY for video tasks)
+        if task.file_type == "video" and config.get("download_subtitles", False):
+            sub_lang_str = config.get("subtitle_lang", "es")
+            langs = [l.strip() for l in sub_lang_str.split(',') if l.strip()]
+            ydl_opts['writesubtitles'] = True
+            ydl_opts['writeautomaticsub'] = True
+            ydl_opts['subtitleslangs'] = langs
+            
+            if config.get("embed_subtitles", True):
+                ydl_opts['embedsubtitles'] = True
+                pps = list(ydl_opts.get('postprocessors', []))
+                if not any(p.get('key') == 'FFmpegEmbedSubtitle' for p in pps):
+                    pps.append({'key': 'FFmpegEmbedSubtitle'})
+                ydl_opts['postprocessors'] = pps
+
         # Run yt-dlp in a thread to not block the event loop
         with ThreadPoolExecutor() as executor:
             await self._loop.run_in_executor(executor, self._run_ydl, task, ydl_opts)

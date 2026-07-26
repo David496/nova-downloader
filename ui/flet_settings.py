@@ -18,6 +18,9 @@ class SettingsView(ft.Column):
         lang = config.get("language", "es")
         is_dark = config.get("theme", "dark") == "dark"
         is_embed = config.get("embed_metadata", True)
+        sub_enabled = config.get("download_subtitles", False)
+        sub_lang = config.get("subtitle_lang", "es")
+        embed_subs = config.get("embed_subtitles", True)
         
         # Header
         self.controls.append(
@@ -87,7 +90,52 @@ class SettingsView(ft.Column):
             border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
         )
 
-        # Section 3: Interfaz & Apariencia
+        # Section 3: Subtítulos
+        self.sub_switch = ft.Switch(
+            label="Descargar subtítulos automáticamente al bajar videos" if lang == "es" else "Download subtitles automatically when saving videos",
+            value=sub_enabled,
+            active_color=ft.Colors.PURPLE_500,
+            on_change=self.save_settings
+        )
+
+        self.embed_sub_switch = ft.Switch(
+            label="Incrustar subtítulos dentro del video (si se desactiva, guarda .srt independiente)" if lang == "es" else "Embed subtitles inside video file (otherwise saves standalone .srt)",
+            value=embed_subs,
+            active_color=ft.Colors.PURPLE_500,
+            on_change=self.save_settings
+        )
+
+        self.sub_lang_dropdown = ft.Dropdown(
+            label="Idioma preferido de subtítulos" if lang == "es" else "Preferred subtitle language",
+            value=sub_lang,
+            border_radius=10,
+            options=[
+                ft.DropdownOption("es", "Español (es)"),
+                ft.DropdownOption("en", "Inglés (en)"),
+                ft.DropdownOption("es,en", "Español e Inglés (es,en)"),
+                ft.DropdownOption("all", "Todos los idiomas disponibles (all)"),
+            ],
+            on_select=self.save_settings,
+            expand=True
+        )
+
+        subs_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.SUBTITLES_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Text("Subtítulos" if lang == "es" else "Subtitles", size=15, weight=ft.FontWeight.W_600),
+                ], spacing=8),
+                self.sub_switch,
+                self.embed_sub_switch,
+                ft.Row([self.sub_lang_dropdown], spacing=8)
+            ], spacing=12),
+            padding=14,
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+            border_radius=14,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
+        )
+
+        # Section 4: Interfaz & Apariencia
         self.lang_dropdown = ft.Dropdown(
             label="Idioma de la aplicación" if lang == "es" else "App Language",
             value=lang,
@@ -135,6 +183,7 @@ class SettingsView(ft.Column):
         self.controls.extend([
             path_card,
             meta_card,
+            subs_card,
             ui_card,
             about_card
         ])
@@ -155,6 +204,9 @@ class SettingsView(ft.Column):
         config["language"] = self.lang_dropdown.value
         config["theme"] = "dark" if self.theme_switch.value else "light"
         config["embed_metadata"] = self.embed_switch.value
+        config["download_subtitles"] = self.sub_switch.value
+        config["embed_subtitles"] = self.embed_sub_switch.value
+        config["subtitle_lang"] = self.sub_lang_dropdown.value
         save_config(config)
         
         # Global Refresh

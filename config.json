@@ -1,5 +1,9 @@
 {
     "theme": "dark",
     "language": "es",
-    "download_dir": "C:/Users/USER/Downloads/PROGRAMAS PORTABLES"
+    "download_dir": "C:/Users/USER/Downloads/PROGRAMAS PORTABLES",
+    "embed_metadata": true,
+    "download_subtitles": true,
+    "subtitle_lang": "es,en",
+    "embed_subtitles": true
 }

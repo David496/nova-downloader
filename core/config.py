@@ -7,7 +7,10 @@ DEFAULT_CONFIG = {
     "theme": "dark",
     "language": "es",
     "download_dir": os.path.expanduser("~/Downloads"),
-    "embed_metadata": True
+    "embed_metadata": True,
+    "download_subtitles": False,
+    "subtitle_lang": "es",
+    "embed_subtitles": True
 }
 
 def load_config():
