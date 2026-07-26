@@ -7,6 +7,7 @@ from ui.flet_settings import SettingsView
 from ui.flet_styles import get_theme, AppColors, AppEvents
 from core.config import config
 import asyncio
+import os
 
 async def main(page: ft.Page):
     def apply_settings():
@@ -38,6 +39,13 @@ async def main(page: ft.Page):
                     pass
 
     page.title = "Nova Downloader"
+    
+    icon_file = os.path.join(os.path.dirname(__file__), "assets", "icon.ico")
+    if not os.path.exists(icon_file):
+        icon_file = os.path.join(os.path.dirname(__file__), "assets", "icon.png")
+    if os.path.exists(icon_file):
+        page.window.icon = icon_file
+
     theme_init = config.get("theme", "dark")
     page.theme_mode = ft.ThemeMode.DARK if theme_init == "dark" else ft.ThemeMode.LIGHT
     page.theme = get_theme(theme_init)
