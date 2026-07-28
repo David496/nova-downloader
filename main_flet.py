@@ -4,6 +4,7 @@ from ui.flet_home import HomeView
 from ui.flet_downloads import DownloadsView
 from ui.flet_library import LibraryView
 from ui.flet_settings import SettingsView
+from ui.flet_player import PlayerView
 from ui.flet_styles import get_theme, AppColors, AppEvents
 from core.config import config
 import asyncio
@@ -11,22 +12,23 @@ import os
 
 async def main(page: ft.Page):
     def apply_settings():
-        theme_mode = config.get("theme", "dark")
-        page.theme_mode = ft.ThemeMode.DARK if theme_mode == "dark" else ft.ThemeMode.LIGHT
-        page.theme = get_theme(theme_mode)
+        theme_mode = "dark"
+        page.theme_mode = ft.ThemeMode.DARK
+        page.theme = get_theme("dark")
         
-        colors = AppColors(theme_mode == "dark")
+        colors = AppColors(True)
         page.bgcolor = colors.BG_MAIN
         rail.bgcolor = colors.BG_SIDEBAR
         content_container.bgcolor = colors.BG_MAIN
         
         lang = config.get("language", "es")
         labels = {
-            "es": ["Inicio", "Descargas", "Biblioteca", "Ajustes"],
-            "en": ["Home", "Downloads", "Library", "Settings"]
+            "es": ["Inicio", "Reproductor", "Descargas", "Biblioteca", "Ajustes"],
+            "en": ["Home", "Player", "Downloads", "Library", "Settings"]
         }
         for i, dest in enumerate(rail.destinations):
-            dest.label = labels[lang][i]
+            if i < len(labels[lang]):
+                dest.label = labels[lang][i]
             
         page.update()
         
@@ -46,16 +48,15 @@ async def main(page: ft.Page):
     if os.path.exists(icon_file):
         page.window.icon = icon_file
 
-    theme_init = config.get("theme", "dark")
-    page.theme_mode = ft.ThemeMode.DARK if theme_init == "dark" else ft.ThemeMode.LIGHT
-    page.theme = get_theme(theme_init)
+    page.theme_mode = ft.ThemeMode.DARK
+    page.theme = get_theme("dark")
     page.window_width = 1250
     page.window_height = 820
     page.window_min_width = 1050
     page.window_min_height = 680
     page.padding = 0
     
-    colors_init = AppColors(theme_init == "dark")
+    colors_init = AppColors(True)
     page.bgcolor = colors_init.BG_MAIN
 
     # Views initialization
@@ -70,11 +71,12 @@ async def main(page: ft.Page):
     # Start the download manager loop as a background task
     asyncio.create_task(download_manager.start())
     
-    home_view = HomeView(download_manager, lambda: navigate(1))
+    home_view = HomeView(download_manager, lambda: navigate(2))
+    player_view = PlayerView(download_manager)
     library_view = LibraryView()
     settings_view = SettingsView()
     
-    views = [home_view, downloads_view, library_view, settings_view]
+    views = [home_view, player_view, downloads_view, library_view, settings_view]
 
     content_container = ft.Container(
         content=views[0], 
@@ -87,7 +89,7 @@ async def main(page: ft.Page):
     def navigate(index):
         rail.selected_index = index
         content_container.content = views[index]
-        if index == 2: # Library
+        if index == 3: # Library
             library_view.load_data()
         page.update()
 
@@ -114,6 +116,7 @@ async def main(page: ft.Page):
         ),
         destinations=[
             ft.NavigationRailDestination(icon=ft.Icons.HOME_OUTLINED, selected_icon=ft.Icons.HOME_ROUNDED, label="Inicio"),
+            ft.NavigationRailDestination(icon=ft.Icons.RADIO_OUTLINED, selected_icon=ft.Icons.RADIO_ROUNDED, label="Reproductor"),
             ft.NavigationRailDestination(icon=ft.Icons.DOWNLOAD_OUTLINED, selected_icon=ft.Icons.DOWNLOAD_ROUNDED, label="Descargas"),
             ft.NavigationRailDestination(icon=ft.Icons.VIDEO_LIBRARY_OUTLINED, selected_icon=ft.Icons.VIDEO_LIBRARY_ROUNDED, label="Biblioteca"),
             ft.NavigationRailDestination(icon=ft.Icons.SETTINGS_OUTLINED, selected_icon=ft.Icons.SETTINGS_ROUNDED, label="Ajustes"),

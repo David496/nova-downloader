@@ -1,89 +1,90 @@
 # Nova Downloader
 
-Nova Downloader es una aplicación de escritorio moderna y elegante para descargar videos y música en alta calidad, desarrollada en Python utilizando **Flet** y **yt-dlp**. Ofrece una interfaz fluida, intuitiva, compacta y totalmente asíncrona.
+Nova Downloader es una aplicación de escritorio multiplataforma diseñada para la descarga y reproducción en línea de contenido multimedia en alta calidad. Desarrollada en Python utilizando **Flet** y **yt-dlp**, ofrece una arquitectura asíncrona de alto rendimiento, bajo consumo de recursos y una interfaz gráfica optimizada en modo oscuro permanente.
 
-> **Desarrollado por David496**
-
----
-
-## 🚀 Características Principales
-
-- **Descarga de Música con Portada y Metadatos**: Incrusta automáticamente la portada del álbum (cover art) y etiquetas ID3 (título, artista, año) en archivos MP3 y M4A/AAC.
-- **Soporte para Subtítulos (Solo en Videos)**: Descarga e incrusta subtítulos dentro del video MP4 (`FFmpegEmbedSubtitle`) o guárdalos como archivos independientes `.srt`. Soporta múltiples idiomas (`es`, `en`, etc.).
-- **Lanzador Portátil de 1 Clic (`NovaDownloader.vbs`)**: Inicia la aplicación en segundo plano sin mostrar ninguna ventana de consola negra.
-- **Icono Personalizado Transparente**: Marca visual propia en la ventana, barra de tareas de Windows y acceso directo.
-- **Creador de Acceso Directo (`CrearAccesoDirecto.vbs`)**: Genera automáticamente un acceso directo en tu Escritorio de Windows con el ícono personalizado del proyecto.
-- **Biblioteca en Lista Vertical**: Historial de descargas organizado en lista con:
-  - Búsqueda en tiempo real por título o URL.
-  - Filtros por tipo (**Música**, **Videos**, **Todos**).
-  - Acciones rápidas para **reproducir/abrir archivo**, **abrir carpeta** o **eliminar del historial**.
-- **Pegar enlace con 1 Clic**: Botón integrado para pegar URLs directamente desde el portapapeles.
-- **Gestión Inteligente de Playlists**: Selecciona individualmente qué elementos de una lista quieres descargar.
-- **Motor Asíncrono Real**: La interfaz nunca se bloquea durante el análisis, descarga o conversión con FFmpeg.
-- **Diseño Compacto y Personalizable**: Cambio de tema (Oscuro/Claro) e idioma (Español/Inglés) desde el panel de Configuración.
+> Desarrollado por **David496**
 
 ---
 
-## ⚠️ Descargo de Responsabilidad (Disclaimer)
+## Características Principales
 
-Este es un **proyecto puramente educativo y de uso personal**. El software se proporciona "tal cual", sin garantía de ningún tipo. Los desarrolladores no se hacen responsables del uso que los usuarios den a esta herramienta ni del contenido descargado. Asegúrate de cumplir con los términos de servicio de la plataforma y las leyes de derechos de autor de tu país.
+### 1. Reproductor en Línea (Online Streaming)
+* **Reproducción Directa sin Descarga**: Motor de audio desarrollado sobre **PySide6 (QtMultimedia)** que permite escuchar canciones en streaming directo sin consumir almacenamiento local.
+* **Búsqueda y Selección Manual**: Interfaz interactiva para explorar canciones o listas de reproducción y seleccionar qué tema escuchar.
+* **Renovación Automática de Enlaces Expira**: Gestión transparente de enlaces CDN de YouTube que renueva tokens expirados sin interrumpir la cola de reproducción.
+* **Micro-interacciones Táctiles**: Iluminación fluida y respuestas visuales al interactuar con las pistas de la cola de reproducción.
+* **Descarga Directa desde la Cola**: Opción para guardar cualquier pista en calidad MP3 a 320 kbps con metadatos incrustados durante la reproducción.
+
+### 2. Gestor de Descargas Multimedia
+* **Incrustación de Metadatos y Carátulas**: Asignación automática de etiquetas ID3v2 (título, artista) e integración de portadas de álbum en formato JPG/PNG para archivos MP3 y M4A.
+* **Soporte de Subtítulos para Videos**: Incrustación de subtítulos multilingües dentro del contenedor MP4 (`FFmpegEmbedSubtitle`) o guardado independiente en formato `.srt` (exclusivo para descargas de video).
+* **Gestión de Listas de Reproducción**: Selección individual o masiva de videos dentro de listas de reproducción públicas.
+* **Descargas Asíncronas en Segundo Plano**: Control del flujo de descargas sin bloqueo del hilo principal de la interfaz de usuario.
+
+### 3. Interfaz y Experiencia de Usuario
+* **Modo Oscuro Permanente**: Interfaz bloqueada en tema oscuro de alto contraste para minimizar la fatiga visual.
+* **Biblioteca y Historial Integrado**: Registro local persistente mediante SQLite con validación en tiempo real del archivo en disco (`os.path.exists`), permitiendo filtrar, buscar y reproducir contenido local descargado.
+* **Ejecución Silenciosa y Portabilidad**: Incluye un ejecutable en VBScript (`NovaDownloader.vbs`) para iniciar la aplicación sin abrir ventanas de consola adicionales, así como un script de creación de acceso directo (`CrearAccesoDirecto.vbs`).
 
 ---
 
-## 🛠️ Requisitos Previos
+## Requisitos del Sistema
 
-- **Python 3.10** o superior.
-- **FFmpeg**: Requerido para la conversión de audio, incrustación de portadas/subtítulos y combinación de pistas 4K/HD.
-  - Instalación en Windows vía `winget`:
+* **Python 3.10** o superior.
+* **FFmpeg**: Necesario para el procesamiento de audio, extracción de portadas, incrustación de subtítulos y combinación de formatos de video HD/4K.
+  * Instalación en Windows mediante PowerShell:
     ```powershell
     winget install ffmpeg
     ```
 
 ---
 
-## 📦 Instalación y Ejecución
+## Instalación
 
-1. **Clona el repositorio**:
+1. **Clonar el repositorio**:
    ```bash
-   git clone <URL_DE_TU_REPOSITORIO>
+   git clone <URL_DEL_REPOSITORIO>
    cd app
    ```
 
-2. **Crea y activa un entorno virtual**:
+2. **Crear y activar el entorno virtual**:
    ```powershell
    python -m venv venv
-   # En Windows (PowerShell):
    .\venv\Scripts\activate
    ```
 
-3. **Instala las dependencias**:
+3. **Instalar dependencias requeridas**:
    ```powershell
    pip install -r requirements.txt
    ```
 
-4. **Ejecuta la aplicación**:
-   - **Opción A (Silencioso - Recomendado sin consola)**:
-     Haz doble clic en el archivo **`NovaDownloader.vbs`** en la raíz del proyecto. La aplicación se abrirá de inmediato sin mostrar ninguna ventana de consola negra.
-   
-   - **Opción B (Crear acceso directo en el Escritorio)**:
-     Haz doble clic en **`CrearAccesoDirecto.vbs`** para colocar un acceso directo en tu Escritorio con el ícono personalizado de Nova Downloader.
+---
 
-   - **Opción C (Desde terminal)**:
-     ```powershell
-     python main_flet.py
-     ```
+## Formas de Ejecución
+
+* **Modo Recomendado (Silencioso en Windows)**:
+  Ejecutar el archivo `NovaDownloader.vbs` ubicado en la raíz del proyecto para iniciar el programa sin ventana de terminal.
+
+* **Crear Acceso Directo en el Escritorio**:
+  Ejecutar el script `CrearAccesoDirecto.vbs` para generar un acceso directo con el icono oficial de Nova Downloader en el Escritorio.
+
+* **Desde la Línea de Comandos**:
+  ```powershell
+  python main_flet.py
+  ```
 
 ---
 
-## 🏗️ Arquitectura Técnica
+## Arquitectura Técnica
 
-- **Frontend / UI**: [Flet](https://flet.dev/) (Flutter renderizado en Python).
-- **Core de Descargas**: [yt-dlp](https://github.com/yt-dlp/yt-dlp) + [FFmpeg](https://ffmpeg.org/).
-- **Base de Datos**: SQLite (`history.db`) con deduplicación automática de registros.
-- **Procesamiento de Imágenes**: Pillow (generación de icono PNG transparente y multirresolución ICO).
+* **Interfaz Gráfica (UI)**: [Flet](https://flet.dev/) (Flutter engine sobre Python).
+* **Motor de Audio**: [PySide6 QtMultimedia](https://wiki.qt.io/Qt_for_Python).
+* **Motor de Extracción**: [yt-dlp](https://github.com/yt-dlp/yt-dlp) + [FFmpeg](https://ffmpeg.org/).
+* **Base de Datos**: SQLite3.
+* **Procesamiento de Imágenes**: Pillow.
 
 ---
 
-## 👤 Créditos
+## Licencia y Uso
 
-Desarrollado por **David496**.
+Proyecto concebido para uso personal y educativo. El usuario es responsable de garantizar el cumplimiento de los términos de servicio de las plataformas origen y de las leyes de propiedad intelectual aplicables.

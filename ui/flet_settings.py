@@ -16,7 +16,6 @@ class SettingsView(ft.Column):
     def _build_ui(self):
         self.controls.clear()
         lang = config.get("language", "es")
-        is_dark = config.get("theme", "dark") == "dark"
         is_embed = config.get("embed_metadata", True)
         sub_enabled = config.get("download_subtitles", False)
         sub_lang = config.get("subtitle_lang", "es")
@@ -26,7 +25,7 @@ class SettingsView(ft.Column):
         self.controls.append(
             ft.Column([
                 ft.Text("Configuración" if lang == "es" else "Settings", size=24, weight=ft.FontWeight.BOLD),
-                ft.Text("Personaliza tus preferencias de descarga y apariencia" if lang == "es" else "Customize your download preferences and appearance", size=12, color=ft.Colors.GREY_400),
+                ft.Text("Personaliza tus preferencias de descarga e idioma" if lang == "es" else "Customize your download preferences and language", size=12, color=ft.Colors.GREY_400),
             ], spacing=1)
         )
         
@@ -135,7 +134,7 @@ class SettingsView(ft.Column):
             border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
         )
 
-        # Section 4: Interfaz & Apariencia
+        # Section 4: Idioma
         self.lang_dropdown = ft.Dropdown(
             label="Idioma de la aplicación" if lang == "es" else "App Language",
             value=lang,
@@ -148,21 +147,13 @@ class SettingsView(ft.Column):
             expand=True
         )
 
-        self.theme_switch = ft.Switch(
-            label="Modo Oscuro (Dark Theme)" if lang == "es" else "Dark Mode",
-            value=is_dark,
-            active_color=ft.Colors.PURPLE_500,
-            on_change=self.save_settings
-        )
-
         ui_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.PALETTE_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
-                    ft.Text("Apariencia e Idioma" if lang == "es" else "Appearance & Language", size=15, weight=ft.FontWeight.W_600),
+                    ft.Icon(ft.Icons.LANGUAGE_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Text("Idioma" if lang == "es" else "Language", size=15, weight=ft.FontWeight.W_600),
                 ], spacing=8),
-                ft.Row([self.lang_dropdown], spacing=8),
-                self.theme_switch
+                ft.Row([self.lang_dropdown], spacing=8)
             ], spacing=12),
             padding=14,
             bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
@@ -202,7 +193,7 @@ class SettingsView(ft.Column):
     def save_settings(self, e):
         config["download_dir"] = self.path_input.value
         config["language"] = self.lang_dropdown.value
-        config["theme"] = "dark" if self.theme_switch.value else "light"
+        config["theme"] = "dark"
         config["embed_metadata"] = self.embed_switch.value
         config["download_subtitles"] = self.sub_switch.value
         config["embed_subtitles"] = self.embed_sub_switch.value

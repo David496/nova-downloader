@@ -172,6 +172,7 @@ class DownloadsView(ft.Column):
             size="N/A",
             path=info.get('path', '')
         )
+        AppEvents.notify()
 
     def on_error(self, task, err):
         asyncio.create_task(self._on_error_async(task, err))
