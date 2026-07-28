@@ -3,6 +3,7 @@ import asyncio
 import threading
 import os
 import uuid
+import re
 from concurrent.futures import ThreadPoolExecutor
 from core.config import config
 
@@ -24,6 +25,8 @@ class DownloadManager:
         self.queue = asyncio.Queue()
         self.current_parent_task = None
         self.current_sub_task = None
+        self.sub_tasks_map = {} # title -> DownloadTask
+        self.finished_titles = set()
         self._loop = None
         self._stop_event = threading.Event()
 
@@ -46,12 +49,44 @@ class DownloadManager:
             self._loop.call_soon_threadsafe(self.progress_cb, task, {'status': 'queued'})
         await self.queue.put(task)
 
+    def _cleanup_thumbnail_files(self, output_path, title):
+        """Removes leftover temporary .png, .webp, and .jpg thumbnail files ONLY after embedding completes."""
+        if not output_path or not os.path.exists(output_path):
+            return
+        clean_title = re.sub(r'[\\/*?:"<>|]', "", title).strip()
+        
+        # Specific exact name cleanup
+        for ext in ['.png', '.webp', '.jpg', '.jpeg']:
+            for fname in [f"{clean_title}{ext}", f"{title}{ext}"]:
+                file_p = os.path.join(output_path, fname)
+                if os.path.exists(file_p):
+                    try:
+                        os.remove(file_p)
+                    except Exception:
+                        pass
+
+        # Search for any leftover PNG or WEBP matching title in directory
+        try:
+            for f in os.listdir(output_path):
+                f_lower = f.lower()
+                if f_lower.endswith(('.png', '.webp')) and (clean_title.lower() in f_lower):
+                    try:
+                        os.remove(os.path.join(output_path, f))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
     async def _process_task(self, task):
         self.current_parent_task = task
         self.current_sub_task = None
+        self.sub_tasks_map.clear()
+        self.finished_titles.clear()
+        
         ydl_opts = {
             'outtmpl': os.path.join(task.output_path, '%(title)s.%(ext)s'),
             'progress_hooks': [self._progress_hook],
+            'postprocessor_hooks': [self._postprocessor_hook],
             'quiet': True,
             'no_warnings': True,
             'ignoreerrors': True,
@@ -68,19 +103,31 @@ class DownloadManager:
         if task.file_type == "audio" and config.get("embed_metadata", True):
             pps = list(ydl_opts.get('postprocessors', []))
             
-            # Check codec
+            # Extract audio codec check
             extract_pp = next((p for p in pps if p.get('key') == 'FFmpegExtractAudio'), None)
             codec = extract_pp.get('preferredcodec') if extract_pp else 'mp3'
 
-            if not any(p.get('key') == 'FFmpegMetadata' for p in pps):
-                pps.append({'key': 'FFmpegMetadata', 'add_metadata': True})
-                
+            # Build exact ordered postprocessor pipeline:
+            # 1. FFmpegExtractAudio
+            # 2. FFmpegThumbnailsConvertor (converts webp/png -> jpg for mutagen/FFmpeg)
+            # 3. FFmpegMetadata (writes ID3/MP4 metadata tags)
+            # 4. EmbedThumbnail (embeds converted jpg into mp3/m4a tags)
+            
+            new_pps = []
+            if extract_pp:
+                new_pps.append(extract_pp)
+            else:
+                new_pps.append({'key': 'FFmpegExtractAudio', 'preferredcodec': codec})
+
             if codec in ['mp3', 'm4a', 'flac', 'aac', 'm4b']:
                 ydl_opts['writethumbnail'] = True
-                if not any(p.get('key') == 'EmbedThumbnail' for p in pps):
-                    pps.append({'key': 'EmbedThumbnail', 'already_have_thumbnail': False})
-                    
-            ydl_opts['postprocessors'] = pps
+                new_pps.append({'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'})
+                new_pps.append({'key': 'FFmpegMetadata', 'add_metadata': True})
+                new_pps.append({'key': 'EmbedThumbnail', 'already_have_thumbnail': False})
+            else:
+                new_pps.append({'key': 'FFmpegMetadata', 'add_metadata': True})
+
+            ydl_opts['postprocessors'] = new_pps
 
         # Enforce subtitles downloading/embedding if enabled in settings (ONLY for video tasks)
         if task.file_type == "video" and config.get("download_subtitles", False):
@@ -126,32 +173,75 @@ class DownloadManager:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(task.url, download=True)
-                target_task = self.current_sub_task if self.current_sub_task else task
                 if info:
                     if info.get('_type') == 'playlist':
                         entries = info.get('entries', [])
                         for entry in entries:
                             if entry:
-                                final_path = self._get_final_path(entry, ydl, task)
                                 title = entry.get('title', task.title)
-                                self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
-                                    'title': title,
-                                    'ext': entry.get('ext'),
-                                    'path': final_path
-                                })
+                                self._cleanup_thumbnail_files(task.output_path, title)
+                                if title not in self.finished_titles:
+                                    self.finished_titles.add(title)
+                                    final_path = self._get_final_path(entry, ydl, task)
+                                    sub_task = self.sub_tasks_map.get(title) or DownloadTask(
+                                        url=task.url,
+                                        options=task.options,
+                                        output_path=task.output_path,
+                                        title=title,
+                                        file_type=task.file_type,
+                                        task_id=str(uuid.uuid4())
+                                    )
+                                    self._loop.call_soon_threadsafe(self.finished_cb, sub_task, {
+                                        'title': title,
+                                        'ext': entry.get('ext'),
+                                        'path': final_path
+                                    })
+                        # Mark parent playlist task finished at the end of playlist execution
+                        self._loop.call_soon_threadsafe(self.finished_cb, task, {
+                            'title': task.title,
+                            'ext': '',
+                            'path': task.output_path
+                        })
                     else:
-                        final_path = self._get_final_path(info, ydl, task)
                         title = info.get('title') or task.title
+                        self._cleanup_thumbnail_files(task.output_path, title)
+                        final_path = self._get_final_path(info, ydl, task)
+                        target_task = self.sub_tasks_map.get(title) or task
                         self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
                             'title': title, 
                             'ext': info.get('ext'), 
                             'path': final_path
                         })
                 else:
+                    target_task = self.current_sub_task if self.current_sub_task else task
                     self._loop.call_soon_threadsafe(self.error_cb, target_task, "Error o elemento saltado.")
         except Exception as e:
             target_task = self.current_sub_task if self.current_sub_task else task
             self._loop.call_soon_threadsafe(self.error_cb, target_task, str(e))
+
+    def _postprocessor_hook(self, d):
+        """Triggers immediately when postprocessors (FFmpeg conversion/metadata) finish for each song."""
+        if self._stop_event.is_set():
+            raise Exception("Cancelled by user")
+
+        if d.get('status') == 'finished':
+            info = d.get('info_dict', {})
+            title = info.get('title', '')
+            
+            sub_task = self.sub_tasks_map.get(title) or (self.current_sub_task if self.current_sub_task and self.current_sub_task.title == title else None)
+            
+            # ONLY trigger finished_cb if the EmbedThumbnail / final postprocessor has completed (or if no embed pp)
+            pp_name = d.get('postprocessor', '')
+            if pp_name in ['EmbedThumbnail', 'FFmpegMetadata', ''] or not sub_task:
+                if sub_task and title and title not in self.finished_titles:
+                    self.finished_titles.add(title)
+                    prep_path = d.get('filepath') or info.get('_filename') or info.get('filepath') or ''
+                    
+                    self._loop.call_soon_threadsafe(self.finished_cb, sub_task, {
+                        'title': title,
+                        'ext': info.get('ext', ''),
+                        'path': prep_path
+                    })
 
     def _progress_hook(self, d):
         if self._stop_event.is_set():
@@ -169,8 +259,8 @@ class DownloadManager:
                 'msg': f"Bajando elemento {idx}/{total}..."
             })
 
-        if not self.current_sub_task or self.current_sub_task.title != current_title:
-            self.current_sub_task = DownloadTask(
+        if current_title not in self.sub_tasks_map:
+            sub_t = DownloadTask(
                 url=self.current_parent_task.url,
                 options=self.current_parent_task.options,
                 output_path=self.current_parent_task.output_path,
@@ -178,6 +268,9 @@ class DownloadManager:
                 file_type=self.current_parent_task.file_type,
                 task_id=str(uuid.uuid4()) if self.current_parent_task.options.get('yesplaylist') else self.current_parent_task.task_id
             )
+            self.sub_tasks_map[current_title] = sub_t
+            
+        self.current_sub_task = self.sub_tasks_map[current_title]
             
         if d['status'] == 'downloading':
             self._loop.call_soon_threadsafe(self.progress_cb, self.current_sub_task, d)

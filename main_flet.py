@@ -93,33 +93,77 @@ async def main(page: ft.Page):
             library_view.load_data()
         page.update()
 
+    # Visually Enhanced Modern Glassmorphic Sidebar
     rail = ft.NavigationRail(
         selected_index=0,
         extended=True,
         min_width=90,
-        min_extended_width=200,
+        min_extended_width=210,
         group_alignment=-0.95,
         bgcolor=colors_init.BG_SIDEBAR,
+        indicator_color=ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_500),
+        indicator_shape=ft.RoundedRectangleBorder(radius=14),
+        selected_label_text_style=ft.TextStyle(color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD, size=12.5),
+        unselected_label_text_style=ft.TextStyle(color=ft.Colors.GREY_400, weight=ft.FontWeight.W_500, size=12.5),
         leading=ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.DOWNLOAD_FOR_OFFLINE_ROUNDED, color=ft.Colors.PURPLE_400, size=24),
-                ft.Text("NOVA", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
-            ], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
-            padding=ft.Padding(0, 15, 0, 10)
+                ft.Container(
+                    content=ft.Icon(ft.Icons.DOWNLOAD_FOR_OFFLINE_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                    padding=8,
+                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500),
+                    border_radius=12,
+                    border=ft.Border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_400))
+                ),
+                ft.Column([
+                    ft.Text("NOVA", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("DOWNLOADER", size=9, weight=ft.FontWeight.W_600, color=ft.Colors.PURPLE_300)
+                ], spacing=0)
+            ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+            padding=ft.Padding(12, 18, 12, 18),
+            margin=ft.Margin(0, 0, 0, 10)
         ),
         trailing=ft.Container(
-            content=ft.Column([
-                ft.Text("Desarrollado por", size=10, color=ft.Colors.GREY_500),
-                ft.Text("David496", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300)
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
-            padding=ft.Padding(0, 0, 0, 15)
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Icon(ft.Icons.CODE_ROUNDED, size=13, color=ft.Colors.PURPLE_300),
+                        ft.Text("Desarrollado por", size=10, color=ft.Colors.GREY_400)
+                    ], alignment=ft.MainAxisAlignment.CENTER, spacing=4),
+                    ft.Text("David496", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300)
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
+                padding=ft.Padding(12, 8, 12, 8),
+                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+                border_radius=14,
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
+            ),
+            padding=ft.Padding(12, 0, 12, 20)
         ),
         destinations=[
-            ft.NavigationRailDestination(icon=ft.Icons.HOME_OUTLINED, selected_icon=ft.Icons.HOME_ROUNDED, label="Inicio"),
-            ft.NavigationRailDestination(icon=ft.Icons.RADIO_OUTLINED, selected_icon=ft.Icons.RADIO_ROUNDED, label="Reproductor"),
-            ft.NavigationRailDestination(icon=ft.Icons.DOWNLOAD_OUTLINED, selected_icon=ft.Icons.DOWNLOAD_ROUNDED, label="Descargas"),
-            ft.NavigationRailDestination(icon=ft.Icons.VIDEO_LIBRARY_OUTLINED, selected_icon=ft.Icons.VIDEO_LIBRARY_ROUNDED, label="Biblioteca"),
-            ft.NavigationRailDestination(icon=ft.Icons.SETTINGS_OUTLINED, selected_icon=ft.Icons.SETTINGS_ROUNDED, label="Ajustes"),
+            ft.NavigationRailDestination(
+                icon=ft.Icon(ft.Icons.HOME_OUTLINED, color=ft.Colors.GREY_400, size=20),
+                selected_icon=ft.Icon(ft.Icons.HOME_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                label="Inicio"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.Icon(ft.Icons.RADIO_OUTLINED, color=ft.Colors.GREY_400, size=20),
+                selected_icon=ft.Icon(ft.Icons.RADIO_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                label="Reproductor"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.Icon(ft.Icons.DOWNLOAD_OUTLINED, color=ft.Colors.GREY_400, size=20),
+                selected_icon=ft.Icon(ft.Icons.DOWNLOAD_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                label="Descargas"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.Icon(ft.Icons.VIDEO_LIBRARY_OUTLINED, color=ft.Colors.GREY_400, size=20),
+                selected_icon=ft.Icon(ft.Icons.VIDEO_LIBRARY_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                label="Biblioteca"
+            ),
+            ft.NavigationRailDestination(
+                icon=ft.Icon(ft.Icons.SETTINGS_OUTLINED, color=ft.Colors.GREY_400, size=20),
+                selected_icon=ft.Icon(ft.Icons.SETTINGS_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                label="Ajustes"
+            ),
         ],
         on_change=lambda e: navigate(e.control.selected_index),
     )

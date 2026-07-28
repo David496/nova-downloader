@@ -15,38 +15,38 @@ class FormatCard(ft.Container):
         
         self.content = ft.Row(
             [
-                ft.Icon(icon, color=ft.Colors.PURPLE_400, size=20),
+                ft.Icon(icon, color=ft.Colors.PURPLE_400, size=18),
                 ft.Column(
                     [
-                        ft.Text(label, weight=ft.FontWeight.BOLD, size=13),
-                        ft.Text(desc, size=11, color=ft.Colors.GREY_400),
+                        ft.Text(label, weight=ft.FontWeight.BOLD, size=12),
+                        ft.Text(desc, size=10, color=ft.Colors.GREY_400),
                     ],
                     spacing=0,
                     expand=True,
                 ),
-                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.PURPLE_400, size=18, visible=False)
+                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.PURPLE_400, size=16, visible=False)
             ],
             alignment=ft.MainAxisAlignment.START,
-            spacing=12
+            spacing=8
         )
-        self.padding = ft.Padding(14, 8, 14, 8)
-        self.border_radius = 10
+        self.padding = ft.Padding(10, 6, 10, 6)
+        self.border_radius = 8
         self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
         self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
         self.on_click = self._handle_click
-        self.animate = ft.Animation(180, ft.AnimationCurve.EASE_OUT)
+        self.animate = ft.Animation(150, ft.AnimationCurve.EASE_OUT)
 
     async def _handle_click(self, e):
         await self.on_click_callback(self)
 
     async def set_selected(self, selected):
         if selected:
-            self.bgcolor = ft.Colors.with_opacity(0.1, ft.Colors.PURPLE_400)
-            self.border = ft.Border.all(2, ft.Colors.PURPLE_400)
+            self.bgcolor = ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_400)
+            self.border = ft.Border.all(1.5, ft.Colors.PURPLE_400)
             self.content.controls[2].visible = True
         else:
             self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
-            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE))
+            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
             self.content.controls[2].visible = False
         
         try:
@@ -64,7 +64,7 @@ class HomeView(ft.Column):
         
         self.expand = True
         self.scroll = ft.ScrollMode.AUTO
-        self.spacing = 18
+        self.spacing = 12
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self._build_ui()
 
@@ -72,40 +72,41 @@ class HomeView(ft.Column):
         self.controls.clear()
         lang = config.get("language", "es")
 
-        # Hero Section
+        # Compact Hero Section
         self.controls.append(
             ft.Container(
                 content=ft.Column([
-                    ft.Text("Nova Downloader", size=34, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_400),
-                    ft.Text("La forma más rápida y elegante de bajar contenido" if lang == "es" else "The fastest and most elegant way to download content", size=13, color=ft.Colors.GREY_400),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                margin=ft.Margin(0, 15, 0, 5)
+                    ft.Text("Nova Downloader", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_400),
+                    ft.Text("La forma más rápida y elegante de bajar contenido" if lang == "es" else "The fastest and most elegant way to download content", size=12, color=ft.Colors.GREY_400),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+                margin=ft.Margin(0, 5, 0, 2)
             )
         )
 
-        # Input Section
+        # Compact Input Section
         self.url_input = ft.TextField(
             hint_text="Pega un enlace aquí (YouTube, etc...)" if lang == "es" else "Paste a link here (YouTube, etc...)",
             border_radius=12,
-            height=50,
-            text_size=14,
+            height=44,
+            text_size=13,
             expand=True,
-            border_color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+            border_color=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
             focused_border_color=ft.Colors.PURPLE_400,
             bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
             on_submit=self.on_analyze,
             prefix_icon=ft.Icons.LINK_ROUNDED,
-            content_padding=ft.Padding(15, 0, 15, 0)
+            content_padding=ft.Padding(14, 0, 14, 0)
         )
         
         self.analyze_btn = ft.ElevatedButton(
             "Analizar" if lang == "es" else "Analyze",
-            height=50,
-            width=130,
+            height=44,
+            width=120,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=12),
                 bgcolor=ft.Colors.PURPLE_600,
                 color=ft.Colors.WHITE,
+                elevation=3
             ),
             on_click=self.on_analyze
         )
@@ -114,31 +115,32 @@ class HomeView(ft.Column):
             content=ft.IconButton(
                 icon=ft.Icons.CONTENT_PASTE_ROUNDED,
                 icon_color=ft.Colors.PURPLE_300,
+                icon_size=18,
                 tooltip="Pegar desde el portapapeles" if lang == "es" else "Paste from clipboard",
                 on_click=self.on_paste
             ),
             bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
             border_radius=12,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
-            height=50,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE)),
+            height=44,
             alignment=ft.Alignment.CENTER
         )
 
         self.controls.append(
-            ft.Row([self.url_input, self.paste_btn, self.analyze_btn], spacing=10, alignment=ft.MainAxisAlignment.CENTER)
+            ft.Row([self.url_input, self.paste_btn, self.analyze_btn], spacing=8, alignment=ft.MainAxisAlignment.CENTER)
         )
 
         # Status & Loading
-        self.status_text = ft.Text("", size=13, color=ft.Colors.PURPLE_200)
-        self.progress_ring = ft.ProgressRing(visible=False, width=20, height=20, stroke_width=2.5, color=ft.Colors.PURPLE_400)
+        self.status_text = ft.Text("", size=12, color=ft.Colors.PURPLE_200)
+        self.progress_ring = ft.ProgressRing(visible=False, width=18, height=18, stroke_width=2.5, color=ft.Colors.PURPLE_400)
         self.controls.append(ft.Row([self.progress_ring, self.status_text], alignment=ft.MainAxisAlignment.CENTER))
 
-        # Results Area
-        self.results_container = ft.Column(visible=False, spacing=20, horizontal_alignment=ft.CrossAxisAlignment.START)
+        # Compact Results Area
+        self.results_container = ft.Column(visible=False, spacing=14, horizontal_alignment=ft.CrossAxisAlignment.START)
         
-        self.info_title = ft.Text("Título del Video", size=20, weight=ft.FontWeight.BOLD, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)
-        self.info_meta = ft.Text("", size=13, color=ft.Colors.GREY_400)
-        self.thumbnail = ft.Image(src="", width=260, height=145, border_radius=12, fit=ft.BoxFit.COVER, visible=False)
+        self.info_title = ft.Text("Título del Video", size=16, weight=ft.FontWeight.BOLD, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)
+        self.info_meta = ft.Text("", size=12, color=ft.Colors.GREY_400)
+        self.thumbnail = ft.Image(src="", width=190, height=106, border_radius=10, fit=ft.BoxFit.COVER, visible=False)
         
         self.playlist_checkbox = ft.Checkbox(
             label="Descargar Playlist Completa" if lang == "es" else "Download Entire Playlist", 
@@ -147,26 +149,59 @@ class HomeView(ft.Column):
             on_change=self.on_playlist_toggle
         )
         
-        self.playlist_items_container = ft.Column(visible=False, spacing=10)
-        self.playlist_items_list = ft.ListView(expand=True, spacing=5, height=200)
+        self.playlist_items_container = ft.Column(visible=False, spacing=8)
+        self.playlist_items_list = ft.ListView(expand=True, spacing=4, height=160)
         
-        self.format_sections = ft.Column(spacing=15)
-        self.video_list = ft.Column(spacing=8)
-        self.audio_list = ft.Column(spacing=8)
-        
+        self.video_list = ft.Column(spacing=6)
+        self.audio_list = ft.Column(spacing=6)
+
+        # Download button instantiated BEFORE format_sections
         self.download_btn = ft.ElevatedButton(
             "Descargar Ahora" if lang == "es" else "Download Now",
             disabled=True,
-            height=50,
-            width=220,
+            height=44,
+            width=200,
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=14),
+                shape=ft.RoundedRectangleBorder(radius=12),
                 bgcolor={ft.ControlState.DEFAULT: ft.Colors.PURPLE_700, ft.ControlState.DISABLED: ft.Colors.with_opacity(0.1, ft.Colors.WHITE)},
                 color=ft.Colors.WHITE,
-                elevation=6
+                elevation=4
             ),
             on_click=self.on_download
         )
+
+        # Side-by-side format columns layout for maximum space efficiency
+        self.format_sections = ft.Column([
+            ft.Row([
+                ft.Container(
+                    content=ft.Column([
+                        ft.Row([ft.Icon(ft.Icons.VIDEOCAM_ROUNDED, size=18, color=ft.Colors.PURPLE_300), ft.Text("Vídeo (MP4)" if lang == "es" else "Video (MP4)", size=15, weight=ft.FontWeight.W_600)]),
+                        self.video_list
+                    ], spacing=8),
+                    expand=True,
+                    padding=14,
+                    bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.WHITE),
+                    border_radius=14,
+                    border=ft.Border.all(1, ft.Colors.with_opacity(0.05, ft.Colors.WHITE))
+                ),
+                ft.Container(
+                    content=ft.Column([
+                        ft.Row([ft.Icon(ft.Icons.HEADPHONES_ROUNDED, size=18, color=ft.Colors.PURPLE_300), ft.Text("Solo Audio" if lang == "es" else "Audio Only", size=15, weight=ft.FontWeight.W_600)]),
+                        self.audio_list
+                    ], spacing=8),
+                    expand=True,
+                    padding=14,
+                    bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.WHITE),
+                    border_radius=14,
+                    border=ft.Border.all(1, ft.Colors.with_opacity(0.05, ft.Colors.WHITE))
+                )
+            ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=14),
+            
+            ft.Row([
+                ft.Text("Selecciona una calidad para continuar" if lang == "es" else "Select a quality to continue", color=ft.Colors.GREY_500, expand=True, italic=True, size=12), 
+                self.download_btn
+            ], alignment=ft.MainAxisAlignment.CENTER)
+        ], spacing=12)
 
         self.results_container.controls.extend([
             ft.Container(
@@ -176,11 +211,11 @@ class HomeView(ft.Column):
                         self.info_title,
                         self.info_meta,
                         self.playlist_checkbox,
-                    ], expand=True, spacing=12)
-                ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=35),
-                padding=25,
+                    ], expand=True, spacing=6)
+                ], vertical_alignment=ft.CrossAxisAlignment.START, spacing=18),
+                padding=16,
                 bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
-                border_radius=25,
+                border_radius=16,
                 border=ft.Border.all(1, ft.Colors.with_opacity(0.05, ft.Colors.WHITE))
             ),
             self.playlist_items_container,
@@ -188,29 +223,14 @@ class HomeView(ft.Column):
         ])
 
         self.playlist_items_container.controls.extend([
-            ft.Text("Selecciona los videos a descargar:" if lang == "es" else "Select videos to download:", size=16, weight=ft.FontWeight.W_600),
+            ft.Text("Selecciona los videos a descargar:" if lang == "es" else "Select videos to download:", size=14, weight=ft.FontWeight.W_600),
             ft.Container(
                 content=self.playlist_items_list,
-                padding=10,
-                border=ft.Border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
-                border_radius=15,
+                padding=8,
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE)),
+                border_radius=12,
                 bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.WHITE)
             )
-        ])
-
-        self.format_sections.controls.extend([
-            ft.Column([
-                ft.Row([ft.Icon(ft.Icons.VIDEOCAM, size=20, color=ft.Colors.PURPLE_300), ft.Text("Vídeo (MP4)" if lang == "es" else "Video (MP4)", size=18, weight=ft.FontWeight.W_600)]),
-                self.video_list
-            ], spacing=10),
-            ft.Column([
-                ft.Row([ft.Icon(ft.Icons.MUSIC_NOTE, size=20, color=ft.Colors.PURPLE_300), ft.Text("Solo Audio" if lang == "es" else "Audio Only", size=18, weight=ft.FontWeight.W_600)]),
-                self.audio_list
-            ], spacing=10),
-            ft.Row([
-                ft.Text("Selecciona una calidad para continuar" if lang == "es" else "Select a quality to continue", color=ft.Colors.GREY_500, expand=True, italic=True), 
-                self.download_btn
-            ], alignment=ft.MainAxisAlignment.CENTER)
         ])
 
         self.controls.append(self.results_container)
@@ -359,13 +379,13 @@ class HomeView(ft.Column):
         wav_pps = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'}]
         
         if embed_meta:
-            mp3_high_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
-            mp3_std_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
-            m4a_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
+            mp3_high_pps.extend([{'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'}, {'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
+            mp3_std_pps.extend([{'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'}, {'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
+            m4a_pps.extend([{'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'}, {'key': 'FFmpegMetadata', 'add_metadata': True}, {'key': 'EmbedThumbnail', 'already_have_thumbnail': False}])
             wav_pps.extend([{'key': 'FFmpegMetadata', 'add_metadata': True}])
 
         audio_qualities = [
-            ("MP3 Alta Fidelidad", "320kbps - Con portada y metadatos" if embed_meta else "320kbps - Calidad CD", {
+            ("MP3 Alta Fidelidad", "320kbps - Con portada" if embed_meta else "320kbps - Calidad CD", {
                 'format': 'bestaudio/best',
                 'writethumbnail': embed_meta,
                 'postprocessors': mp3_high_pps
@@ -375,12 +395,12 @@ class HomeView(ft.Column):
                 'writethumbnail': embed_meta,
                 'postprocessors': mp3_std_pps
             }),
-            ("M4A / AAC", "Formato de audio ligero", {
+            ("M4A / AAC", "Audio ligero", {
                 'format': 'bestaudio/best',
                 'writethumbnail': embed_meta,
                 'postprocessors': m4a_pps
             }),
-            ("Formato WAV", "Sin compresión (Peso alto)", {
+            ("Formato WAV", "Sin compresión", {
                 'format': 'bestaudio/best',
                 'postprocessors': wav_pps
             }),
@@ -428,7 +448,7 @@ class HomeView(ft.Column):
                 output_path = os.path.join(output_dir, safe_title)
                 
                 options = dict(base_options)
-                options['outtmpl'] = os.path.join(output_path, '%(playlist_index)s - %(title)s.%(ext)s')
+                options['outtmpl'] = os.path.join(output_path, '%(title)s.%(ext)s')
                 options['yesplaylist'] = True
                 
                 task = DownloadTask(

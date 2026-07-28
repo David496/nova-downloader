@@ -76,16 +76,12 @@ class QtAudioPlayer:
                             self.player.stop()
                             self.player.setSource(QUrl(args[0]))
                             self.player.play()
-                            self.is_playing = True
                         elif cmd == 'pause':
                             self.player.pause()
-                            self.is_playing = False
                         elif cmd == 'resume':
                             self.player.play()
-                            self.is_playing = True
                         elif cmd == 'stop':
                             self.player.stop()
-                            self.is_playing = False
                         elif cmd == 'seek':
                             self.player.setPosition(int(args[0] * 1000))
                         elif cmd == 'set_volume':
@@ -95,7 +91,7 @@ class QtAudioPlayer:
                 self.app.processEvents()
 
             self.timer = QTimer()
-            self.timer.setInterval(50)
+            self.timer.setInterval(30)
             self.timer.timeout.connect(process_q)
             self.timer.start()
 
@@ -158,15 +154,19 @@ class QtAudioPlayer:
                         pass
 
     def play_url(self, stream_url):
+        self.is_playing = True
         self.cmd_queue.put(('play_url', (stream_url,)))
 
     def pause(self):
+        self.is_playing = False
         self.cmd_queue.put(('pause', ()))
 
     def resume(self):
+        self.is_playing = True
         self.cmd_queue.put(('resume', ()))
 
     def stop(self):
+        self.is_playing = False
         self.cmd_queue.put(('stop', ()))
 
     def seek(self, target_sec):

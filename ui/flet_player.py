@@ -55,6 +55,8 @@ class PlayerView(ft.Column):
             self.audio_player.set_loop(self.loop)
         except Exception:
             pass
+        self._update_hero_ui()
+        self._update_queue_ui()
 
     def on_global_refresh(self):
         if self.loop and self.loop.is_running():
@@ -66,11 +68,8 @@ class PlayerView(ft.Column):
             self._refresh_queue_realtime()
 
     def _refresh_queue_realtime(self):
+        self._update_hero_ui()
         self._update_queue_ui()
-        try:
-            self.queue_list.update()
-        except Exception:
-            pass
 
     def _sanitize_filename(self, name):
         return re.sub(r'[\\/*?:"<>|]', "", name).strip()
@@ -106,6 +105,45 @@ class PlayerView(ft.Column):
                 return True
 
         return False
+
+    def _update_hero_ui(self):
+        lang = config.get("language", "es")
+        if self.current_track:
+            self.track_title.value = self.current_track.title
+            self.track_artist.value = self.current_track.artist
+            self.total_time_lbl.value = self._format_seconds(self.current_track.duration)
+            if self.current_track.thumbnail:
+                self.thumbnail_img.src = self.current_track.thumbnail
+                self.thumbnail_img.visible = True
+                self.placeholder_icon.visible = False
+            else:
+                self.thumbnail_img.visible = False
+                self.placeholder_icon.visible = True
+                
+            if self.is_loading_track:
+                self.badge_lbl.value = "CARGANDO..."
+                self.status_dot.bgcolor = ft.Colors.AMBER_400
+            elif self.audio_player.is_playing:
+                self.badge_lbl.value = "EN REPRODUCCIÓN" if lang == "es" else "PLAYING"
+                self.status_dot.bgcolor = ft.Colors.GREEN_400
+                self.play_btn.content.icon = ft.Icons.PAUSE_ROUNDED
+            else:
+                self.badge_lbl.value = "EN PAUSA" if lang == "es" else "PAUSED"
+                self.status_dot.bgcolor = ft.Colors.AMBER_400
+                self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
+        else:
+            self.track_title.value = "Selecciona una canción" if lang == "es" else "Select a song"
+            self.track_artist.value = "Haz clic en cualquier tema de la lista" if lang == "es" else "Click on any track in the queue"
+            self.thumbnail_img.visible = False
+            self.placeholder_icon.visible = True
+            self.badge_lbl.value = "ESPERANDO PISTA" if lang == "es" else "READY"
+            self.status_dot.bgcolor = ft.Colors.PURPLE_400
+            self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
+            
+        try:
+            self.hero_card.update()
+        except Exception:
+            self._safe_update()
 
     def _build_ui(self):
         self.controls.clear()
@@ -375,7 +413,7 @@ class PlayerView(ft.Column):
             self.volume_badge
         ], spacing=2)
 
-        # Hero Card with generous internal padding (24px) for elegant breathing room around volume row
+        # Hero Card with generous internal padding (24px)
         self.hero_card = ft.Container(
             content=ft.Column([
                 badge_header_row,
@@ -464,16 +502,7 @@ class PlayerView(ft.Column):
         self.active_download_urls.clear()
         self.active_download_titles.clear()
         self.audio_player.stop()
-        self.track_title.value = "Selecciona una canción"
-        self.track_artist.value = "Haz clic en cualquier tema de la lista"
-        self.thumbnail_img.visible = False
-        self.placeholder_icon.visible = True
-        self.progress_slider.value = 0
-        self.current_time_lbl.value = "00:00"
-        self.total_time_lbl.value = "00:00"
-        self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
-        self.badge_lbl.value = "ESPERANDO PISTA"
-        self.status_dot.bgcolor = ft.Colors.PURPLE_400
+        self._update_hero_ui()
         self._update_queue_ui()
 
     def get_clipboard_text(self):
@@ -531,7 +560,10 @@ class PlayerView(ft.Column):
                     padding=50
                 )
             )
-            self._safe_update()
+            try:
+                self.queue_list.update()
+            except Exception:
+                self._safe_update()
             return
 
         downloaded_urls, downloaded_titles = self._get_downloaded_sets()
@@ -643,7 +675,10 @@ class PlayerView(ft.Column):
             )
             self.queue_list.controls.append(item)
 
-        self._safe_update()
+        try:
+            self.queue_list.update()
+        except Exception:
+            self._safe_update()
 
     async def play_track_at(self, index, force_refresh=False):
         if index < 0 or index >= len(self.queue) or self.is_loading_track:
@@ -653,25 +688,8 @@ class PlayerView(ft.Column):
         self.current_index = index
         self.current_track = self.queue[index]
 
-        # Update Hero Info
-        self.track_title.value = self.current_track.title
-        self.track_artist.value = self.current_track.artist
-        self.progress_slider.value = 0
-        self.current_time_lbl.value = "00:00"
-        self.total_time_lbl.value = self._format_seconds(self.current_track.duration)
-
-        if self.current_track.thumbnail:
-            self.thumbnail_img.src = self.current_track.thumbnail
-            self.thumbnail_img.visible = True
-            self.placeholder_icon.visible = False
-        else:
-            self.thumbnail_img.visible = False
-            self.placeholder_icon.visible = True
-
+        self._update_hero_ui()
         self._update_queue_ui()
-        self.badge_lbl.value = "CARGANDO..."
-        self.status_dot.bgcolor = ft.Colors.AMBER_400
-        self._safe_update()
 
         # Resolve stream URL
         stream_url = await self.player_service.resolve_stream_url(self.current_track, force_refresh=force_refresh)
@@ -682,9 +700,8 @@ class PlayerView(ft.Column):
 
         if stream_url:
             self.audio_player.play_url(stream_url)
-            self.play_btn.content.icon = ft.Icons.PAUSE_ROUNDED
-            self.badge_lbl.value = "EN REPRODUCCIÓN"
-            self.status_dot.bgcolor = ft.Colors.GREEN_400
+            self.is_loading_track = False
+            self._update_hero_ui()
             
             # Prefetch next track in queue asynchronously
             next_idx = (index + 1) % len(self.queue) if self.queue else 0
@@ -696,25 +713,16 @@ class PlayerView(ft.Column):
             self.play_next()
             return
 
-        self.is_loading_track = False
-        self._safe_update()
-
     def toggle_play_pause(self, e=None):
         if not self.current_track:
             return
 
         if self.audio_player.is_playing:
             self.audio_player.pause()
-            self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
-            self.badge_lbl.value = "EN PAUSA"
-            self.status_dot.bgcolor = ft.Colors.AMBER_400
         else:
             self.audio_player.resume()
-            self.play_btn.content.icon = ft.Icons.PAUSE_ROUNDED
-            self.badge_lbl.value = "EN REPRODUCCIÓN"
-            self.status_dot.bgcolor = ft.Colors.GREEN_400
 
-        self._safe_update()
+        self._update_hero_ui()
 
     def play_next(self):
         if not self.queue:
@@ -792,7 +800,7 @@ class PlayerView(ft.Column):
             try:
                 self.current_time_lbl.update()
             except Exception:
-                self._safe_update()
+                pass
 
     def on_slider_end(self, e):
         val = float(e.control.value)
@@ -818,12 +826,13 @@ class PlayerView(ft.Column):
         
         self.current_time_lbl.value = self._format_seconds(pos_sec)
 
+        # Isolated direct updates ONLY to timeline controls to prevent re-rendering the thumbnail
         try:
             self.progress_slider.update()
             self.current_time_lbl.update()
             self.total_time_lbl.update()
         except Exception:
-            self._safe_update()
+            pass
 
     def _on_audio_finished(self):
         if self.is_repeat and self.current_index >= 0:
@@ -845,11 +854,8 @@ class PlayerView(ft.Column):
                 if os.path.exists(os.path.join(output_dir, f"{clean_title}{ext}")):
                     self.active_download_urls.discard(t_url)
                     self.active_download_titles.discard(clean_title.lower())
+                    self._update_hero_ui()
                     self._update_queue_ui()
-                    try:
-                        self.queue_list.update()
-                    except Exception:
-                        pass
                     return
 
     async def on_download_track(self, track, already_downloaded=False):
@@ -861,6 +867,7 @@ class PlayerView(ft.Column):
         
         self.active_download_urls.add(t_url)
         self.active_download_titles.add(clean_title.lower())
+        self._update_hero_ui()
         self._update_queue_ui()
 
         asyncio.create_task(self._poll_download_completion(clean_title, t_url))
@@ -897,10 +904,8 @@ class PlayerView(ft.Column):
         )
         
         await self.download_manager.add_task(task)
-        try:
-            self.queue_list.update()
-        except Exception:
-            pass
+        self._update_hero_ui()
+        self._update_queue_ui()
 
     def _safe_update(self):
         try:
