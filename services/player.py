@@ -172,6 +172,13 @@ class QtAudioPlayer:
                         self.on_error()
                     except Exception:
                         pass
+        elif status == QMediaPlayer.MediaStatus.StalledMedia:
+            # Auto-recover from temporary buffer underruns
+            if self.player and self.is_playing:
+                try:
+                    self.player.play()
+                except Exception:
+                    pass
 
     def play_url(self, stream_url):
         self.is_playing = True
@@ -289,6 +296,8 @@ class PlayerService:
             'no_warnings': True,
             'format': 'bestaudio[ext=m4a]/bestaudio/best',
             'skip_download': True,
+            'nocheckcertificate': True,
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
