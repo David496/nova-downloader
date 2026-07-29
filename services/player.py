@@ -274,13 +274,27 @@ class PlayerService:
                     video_id = entry.get('id', '')
                     url = entry.get('url') or (f"https://www.youtube.com/watch?v={video_id}" if video_id else "")
                     title = entry.get('title', 'Desconocido')
-                    uploader = entry.get('uploader') or entry.get('channel') or 'Artista Desconocido'
+                    
+                    # Enhanced multi-tier artist extraction
+                    uploader = entry.get('channel') or entry.get('uploader') or entry.get('uploader_id') or entry.get('artist') or entry.get('creator')
+                    if uploader and uploader.lower().endswith(' - topic'):
+                        uploader = uploader[:-8].strip()
+
+                    parsed_artist = None
+                    for sep in [' - ', ' – ', ' | ']:
+                        if sep in title:
+                            parts = title.split(sep, 1)
+                            if len(parts) == 2 and parts[0].strip() and parts[1].strip():
+                                parsed_artist = parts[0].strip()
+                                break
+
+                    artist = uploader or parsed_artist or 'Artista Desconocido'
                     duration = entry.get('duration') or 0
                     thumbnail = entry.get('thumbnail') or (f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" if video_id else "")
 
                     tracks.append(MusicTrack(
                         title=title,
-                        artist=uploader,
+                        artist=artist,
                         duration=duration,
                         thumbnail=thumbnail,
                         url=url,

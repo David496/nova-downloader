@@ -55,6 +55,7 @@ desktop.ini
 # =========================
 build/
 dist/
+*.spec
 
 # =========================
 # TEST CACHE

@@ -1,0 +1,57 @@
+name: Build and Publish Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Executable with PyInstaller
+        run: |
+          python build_exe.py
+
+      - name: Create Portable Zip Package
+        shell: powershell
+        run: |
+          Compress-Archive -Path "dist/NovaDownloader/*" -DestinationPath "dist/NovaDownloader-Windows-x64.zip" -Force
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaDownloader-Windows-x64
+          path: dist/NovaDownloader-Windows-x64.zip
+
+      - name: Release to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
+          name: ${{ github.ref_name == 'main' && 'Nova Downloader Latest Release' || github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/NovaDownloader-Windows-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
