@@ -9,13 +9,54 @@ Nova Downloader es una aplicación de escritorio multiplataforma diseñada para 
 
 ---
 
-## 🚀 Descarga Directa e Instalación Rápida
+## 🚀 Guía de Instalación y Uso
 
-Para usar Nova Downloader sin necesidad de instalar Python ni dependencias manuales:
+Elige la opción que prefieras según tu perfil de usuario:
 
-1. **[Descargar Nova Downloader para Windows](https://github.com/David496/nova-downloader/releases/latest/download/NovaDownloader-Windows-x64.zip)**
-2. Extrae el archivo `.zip` en cualquier carpeta de tu equipo.
-3. Ejecuta **`NovaDownloader.exe`** (o haz doble clic en `CrearAccesoDirecto.vbs` para enviarlo a tu Escritorio).
+### 📦 Opción 1: Ejecutar la App Portable (Para Usuarios Finales)
+No requiere tener Python instalado ni ejecutar comandos.
+
+1. **[Descargar Nova Downloader para Windows (.zip)](https://github.com/David496/nova-downloader/releases/latest/download/NovaDownloader-Windows-x64.zip)**.
+2. Extrae el archivo `.zip` en la carpeta que desees en tu PC (ejemplo: `C:\NovaDownloader`).
+3. Ejecuta **`NovaDownloader.exe`** para abrir la aplicación.
+   * ⚠️ **Nota Importante**: Mantén la carpeta `_internal` en la misma ubicación junto al ejecutable `.exe`. 
+   * 💡 **Tip para el Escritorio**: Haz clic derecho sobre `NovaDownloader.exe` ➔ **Enviar a** ➔ **Escritorio (crear acceso directo)** para abrir la app desde tu pantalla principal.
+
+---
+
+### 💻 Opción 2: Ejecución desde el Código Fuente (Para Desarrolladores)
+
+1. **Clonar el repositorio**:
+   ```bash
+   git clone https://github.com/David496/nova-downloader.git
+   cd app
+   ```
+
+2. **Requisitos previos (FFmpeg)**:
+   ```powershell
+   winget install ffmpeg
+   ```
+
+3. **Crear y activar el entorno virtual**:
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\activate
+   ```
+
+4. **Instalar dependencias**:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+5. **Ejecutar la aplicación**:
+   * **Modo estándar**:
+     ```powershell
+     python main_flet.py
+     ```
+   * **Modo silencioso (sin ventana de consola negra)**:
+     Doble clic sobre el archivo `NovaDownloader.vbs`.
+   * **Crear acceso directo en Escritorio**:
+     Doble clic sobre `CrearAccesoDirecto.vbs`.
 
 ---
 
@@ -36,51 +77,13 @@ Para usar Nova Downloader sin necesidad de instalar Python ni dependencias manua
 ### 3. Interfaz y Experiencia de Usuario
 * **Modo Oscuro Permanente**: Interfaz visual estilizada en tema oscuro con capsules de selección en tono violeta y micro-animaciones táctiles en botones y listas.
 * **Biblioteca e Historial Integrado**: Registro local persistente mediante SQLite con validación en tiempo real del archivo en disco (`os.path.exists`) y filtrado instantáneo en memoria RAM.
-* **Ejecución Silenciosa y Portabilidad**: Ejecución nativa sin consola y scripts auxiliares (`NovaDownloader.vbs` y `CrearAccesoDirecto.vbs`).
-
----
-
-## 🛠️ Requisitos del Sistema (Para Desarrollo)
-
-* **Python 3.10** o superior.
-* **FFmpeg**: Necesario para el procesamiento de audio, extracción de portadas, incrustación de subtítulos y combinación de formatos de video HD/4K.
-  * Instalación en Windows mediante PowerShell:
-    ```powershell
-    winget install ffmpeg
-    ```
-
----
-
-## 💻 Instalación desde Código Fuente
-
-1. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/David496/nova-downloader.git
-   cd app
-   ```
-
-2. **Crear y activar el entorno virtual**:
-   ```powershell
-   python -m venv venv
-   .\venv\Scripts\activate
-   ```
-
-3. **Instalar dependencias requeridas**:
-   ```powershell
-   pip install -r requirements.txt
-   ```
-
-4. **Ejecutar la aplicación**:
-   ```powershell
-   python main_flet.py
-   ```
 
 ---
 
 ## ⚙️ Compilación Automática (CI/CD)
 
 El proyecto incluye una automatización completa mediante **GitHub Actions** (`.github/workflows/build_release.yml`):
-* Cada vez que se suben cambios (`git push`) a la rama `main` o se publica una etiqueta de versión (`tag`), GitHub compile automáticamente el ejecutable independiente en Windows y publica el paquete `.zip` en la sección de **GitHub Releases**.
+* Cada vez que se suben cambios (`git push`) a la rama `main` o se publica una etiqueta de versión (`tag`), GitHub compila automáticamente el ejecutable independiente en Windows y publica el paquete `.zip` en la sección de **GitHub Releases**.
 
 ---
 
