@@ -22,7 +22,7 @@ import queue
 import re
 from concurrent.futures import ThreadPoolExecutor
 from PySide6.QtCore import QCoreApplication, QUrl, QTimer
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaDevices
 
 class MusicTrack:
     def __init__(self, title, artist, duration, thumbnail, url, track_id, stream_url=None):
@@ -45,12 +45,21 @@ class QtAudioPlayer:
         self.position_sec = 0
         self.player = None
         self.audio_output = None
+        self.media_devices = None
         self.app = None
         self.cmd_queue = queue.Queue()
         self._init_qt()
 
     def set_loop(self, loop):
         self.loop = loop
+
+    def _on_audio_device_changed(self):
+        try:
+            default_dev = QMediaDevices.defaultAudioOutput()
+            if default_dev and self.audio_output:
+                self.audio_output.setDevice(default_dev)
+        except Exception:
+            pass
 
     def _init_qt(self):
         def qt_thread():
@@ -61,6 +70,17 @@ class QtAudioPlayer:
 
             self.player = QMediaPlayer()
             self.audio_output = QAudioOutput()
+
+            # Dynamically bind to current Windows default audio output device & auto-update on device change
+            try:
+                default_dev = QMediaDevices.defaultAudioOutput()
+                if default_dev:
+                    self.audio_output.setDevice(default_dev)
+                self.media_devices = QMediaDevices()
+                self.media_devices.audioOutputsChanged.connect(self._on_audio_device_changed)
+            except Exception:
+                pass
+
             self.player.setAudioOutput(self.audio_output)
             self.audio_output.setVolume(0.8)
 
