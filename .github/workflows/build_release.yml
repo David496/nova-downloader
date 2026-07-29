@@ -8,6 +8,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -20,13 +23,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
 
       - name: Build Executable with PyInstaller
         run: |
@@ -47,8 +48,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
-          name: ${{ github.ref_name == 'main' && 'Nova Downloader Latest Release' || github.ref_name }}
+          tag_name: v1.0.0
+          name: Nova Downloader v1.0.0
           draft: false
           prerelease: false
           files: |
