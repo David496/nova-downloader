@@ -184,4 +184,5 @@ async def main(page: ft.Page):
     apply_settings()
 
 if __name__ == "__main__":
-    ft.run(main)
+    import sys
+    ft.app(target=main)

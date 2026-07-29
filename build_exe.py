@@ -1,7 +1,6 @@
 import os
 import sys
 import subprocess
-import shutil
 
 def build():
     print("==========================================")
@@ -10,7 +9,6 @@ def build():
 
     project_root = os.path.dirname(os.path.abspath(__file__))
     dist_dir = os.path.join(project_root, "dist")
-    build_dir = os.path.join(project_root, "build")
 
     # Install PyInstaller if not present
     try:
@@ -22,7 +20,7 @@ def build():
     # Define separator based on platform (; for Windows, : for Unix)
     sep = ";" if sys.platform == "win32" else ":"
 
-    # Build PyInstaller command
+    # Build PyInstaller command with explicit flet_desktop hidden imports
     cmd = [
         sys.executable,
         "-m",
@@ -39,6 +37,8 @@ def build():
         f"--add-data={os.path.join(project_root, 'ui')}{sep}ui",
         f"--add-data={os.path.join(project_root, 'utils')}{sep}utils",
         "--hidden-import=flet",
+        "--hidden-import=flet_desktop",
+        "--hidden-import=flet_core",
         "--hidden-import=PySide6.QtCore",
         "--hidden-import=PySide6.QtMultimedia",
         "--hidden-import=mutagen",
