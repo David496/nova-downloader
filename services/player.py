@@ -1,5 +1,7 @@
 import os
 import sys
+import tempfile
+import glob
 
 # Suppress Qt/FFmpeg C-level logging to keep console 100% clean
 os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.multimedia*=false;qt*=false;default.debug=false"
@@ -94,7 +96,11 @@ class QtAudioPlayer:
                         cmd, args = self.cmd_queue.get_nowait()
                         if cmd == 'play_url':
                             self.player.stop()
-                            self.player.setSource(QUrl(args[0]))
+                            target_src = args[0]
+                            if target_src.startswith("http://") or target_src.startswith("https://"):
+                                self.player.setSource(QUrl(target_src))
+                            else:
+                                self.player.setSource(QUrl.fromLocalFile(target_src))
                             self.player.play()
                         elif cmd == 'pause':
                             self.player.pause()
@@ -204,8 +210,24 @@ class QtAudioPlayer:
 
 class PlayerService:
     def __init__(self):
-        self.executor = ThreadPoolExecutor(max_workers=3)
+        self.executor = ThreadPoolExecutor(max_workers=4)
         self.stream_cache = {}
+        self.temp_dir = os.path.join(tempfile.gettempdir(), "nova_stream_cache")
+        os.makedirs(self.temp_dir, exist_ok=True)
+
+    def _cleanup_old_cache(self):
+        """Keep the temporary streaming cache lightweight (max 20 items)."""
+        try:
+            files = glob.glob(os.path.join(self.temp_dir, "*.*"))
+            if len(files) > 20:
+                files.sort(key=os.path.getmtime)
+                for f in files[:-15]:
+                    try:
+                        os.remove(f)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     async def search_or_extract(self, query):
         query = query.strip()
@@ -274,36 +296,58 @@ class PlayerService:
             track.stream_url = None
             self.stream_cache.pop(track.url, None)
 
-        if track.stream_url:
+        if track.stream_url and os.path.exists(track.stream_url):
             return track.stream_url
 
         if track.url in self.stream_cache and not force_refresh:
-            track.stream_url = self.stream_cache[track.url]
-            return track.stream_url
+            cached_path = self.stream_cache[track.url]
+            if os.path.exists(cached_path):
+                track.stream_url = cached_path
+                return track.stream_url
 
         loop = asyncio.get_running_loop()
-        stream_url = await loop.run_in_executor(self.executor, self._run_resolve, track.url)
+        stream_url = await loop.run_in_executor(self.executor, self._run_cache_stream, track)
         if stream_url:
-            if len(self.stream_cache) > 50:
-                self.stream_cache.clear()
             self.stream_cache[track.url] = stream_url
             track.stream_url = stream_url
+            self._cleanup_old_cache()
         return stream_url
 
-    def _run_resolve(self, url):
+    def _run_cache_stream(self, track):
+        clean_title = re.sub(r'[\\/*?:"<>|]', "", track.title).strip() or "track"
+        target_file = os.path.join(self.temp_dir, f"{clean_title}.m4a")
+        
+        if os.path.exists(target_file) and os.path.getsize(target_file) > 100000:
+            return target_file
+
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
             'format': 'bestaudio[ext=m4a]/bestaudio/best',
-            'skip_download': True,
+            'outtmpl': os.path.join(self.temp_dir, f"{clean_title}.%(ext)s"),
             'nocheckcertificate': True,
             'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'm4a'}],
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                if info and 'url' in info:
-                    return info['url']
+                ydl.download([track.url])
+                if os.path.exists(target_file):
+                    return target_file
+                # Check candidate extensions
+                for ext in ['.m4a', '.mp3', '.webm', '.opus']:
+                    cand = os.path.join(self.temp_dir, f"{clean_title}{ext}")
+                    if os.path.exists(cand):
+                        return cand
         except Exception as e:
-            print(f"Error resolving stream URL: {e}")
+            print(f"Error caching stream: {e}")
+            # Fallback to direct raw URL extraction if download failed
+            try:
+                raw_opts = {'quiet': True, 'format': 'bestaudio/best', 'skip_download': True}
+                with yt_dlp.YoutubeDL(raw_opts) as ydl:
+                    info = ydl.extract_info(track.url, download=False)
+                    if info and 'url' in info:
+                        return info['url']
+            except Exception:
+                pass
         return None
