@@ -20,7 +20,7 @@ def build():
     # Define separator based on platform (; for Windows, : for Unix)
     sep = ";" if sys.platform == "win32" else ":"
 
-    # Build PyInstaller command with explicit flet_desktop hidden imports
+    # Build PyInstaller command collecting all flet package data (icons.json, fonts, etc.)
     cmd = [
         sys.executable,
         "-m",
@@ -36,9 +36,9 @@ def build():
         f"--add-data={os.path.join(project_root, 'services')}{sep}services",
         f"--add-data={os.path.join(project_root, 'ui')}{sep}ui",
         f"--add-data={os.path.join(project_root, 'utils')}{sep}utils",
-        "--hidden-import=flet",
-        "--hidden-import=flet_desktop",
-        "--hidden-import=flet_core",
+        "--collect-all=flet",
+        "--collect-all=flet_desktop",
+        "--collect-all=flet_core",
         "--hidden-import=PySide6.QtCore",
         "--hidden-import=PySide6.QtMultimedia",
         "--hidden-import=mutagen",
