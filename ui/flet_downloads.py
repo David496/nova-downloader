@@ -88,9 +88,15 @@ class DownloadItem(ft.Container):
 
     async def set_error_async(self, err):
         self.progress_bar.value = 0
-        self.status_text.value = f"Error: {err}"
-        self.status_text.color = ft.Colors.RED_400
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.RED_400))
+        err_str = str(err).lower()
+        if any(kw in err_str for kw in ["confirm your age", "inappropriate for some users", "age-restricted", "sign in to confirm", "requested format is not available"]):
+            self.status_text.value = "⚠️ Video +18 no disponible para descarga por restricción de edad"
+            self.status_text.color = ft.Colors.AMBER_400
+            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.AMBER_400))
+        else:
+            self.status_text.value = f"Error: {err}"
+            self.status_text.color = ft.Colors.RED_400
+            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.RED_400))
         try:
             self.update()
         except:

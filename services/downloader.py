@@ -4,8 +4,20 @@ import threading
 import os
 import uuid
 import re
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 from core.config import config
+from utils.cookies import apply_auto_cookies
+
+def get_ffmpeg_location():
+    """Detects and returns the absolute directory path of ffmpeg.exe to ensure instant 1st-run video/audio merging."""
+    ff = shutil.which('ffmpeg')
+    if ff:
+        return os.path.dirname(ff)
+    for candidate in [r"C:\ffmpeg\bin", r"C:\ffmpeg", os.path.join(os.path.dirname(os.path.dirname(__file__)), "ffmpeg")]:
+        if os.path.exists(os.path.join(candidate, "ffmpeg.exe")):
+            return candidate
+    return None
 
 class DownloadTask:
     def __init__(self, url, options, output_path, title, file_type, task_id, thumbnail_url=None):
@@ -29,6 +41,7 @@ class DownloadManager:
         self.finished_titles = set()
         self._loop = None
         self._stop_event = threading.Event()
+        self._ffmpeg_path = get_ffmpeg_location()
 
     async def start(self):
         self._loop = asyncio.get_running_loop()
@@ -89,8 +102,11 @@ class DownloadManager:
             'postprocessor_hooks': [self._postprocessor_hook],
             'quiet': True,
             'no_warnings': True,
-            'ignoreerrors': True,
+            'nocheckcertificate': True,
         }
+
+        if self._ffmpeg_path:
+            ydl_opts['ffmpeg_location'] = self._ffmpeg_path
         
         task_options = dict(task.options)
         if 'outtmpl' in task_options:
@@ -136,9 +152,13 @@ class DownloadManager:
             ydl_opts['writesubtitles'] = True
             ydl_opts['writeautomaticsub'] = True
             ydl_opts['subtitleslangs'] = langs
+            ydl_opts['ignoreerrors'] = True # Ensures HTTP 429 subtitle warnings never block the video download
             
             if config.get("embed_subtitles", True):
                 ydl_opts['embedsubtitles'] = True
+                ydl_opts['postprocessor_args'] = {
+                    'ffmpegembedsubtitle': ['-c:s', 'mov_text']
+                }
                 pps = list(ydl_opts.get('postprocessors', []))
                 if not any(p.get('key') == 'FFmpegEmbedSubtitle' for p in pps):
                     pps.append({'key': 'FFmpegEmbedSubtitle'})
@@ -149,72 +169,89 @@ class DownloadManager:
             await self._loop.run_in_executor(executor, self._run_ydl, task, ydl_opts)
 
     def _get_final_path(self, info, ydl, task):
-        if info.get('_type') == 'playlist':
+        if info and info.get('_type') == 'playlist':
             return task.output_path
         
-        prep_path = ydl.prepare_filename(info)
-        reqs = info.get('_requested_downloads', [])
-        if reqs and reqs[0].get('filepath'):
-            if os.path.exists(reqs[0]['filepath']):
-                return reqs[0]['filepath']
+        if info:
+            prep_path = ydl.prepare_filename(info)
+            reqs = info.get('_requested_downloads', [])
+            if reqs and reqs[0].get('filepath'):
+                if os.path.exists(reqs[0]['filepath']):
+                    return reqs[0]['filepath']
+                    
+            if os.path.exists(prep_path):
+                return prep_path
                 
-        if os.path.exists(prep_path):
+            base, _ = os.path.splitext(prep_path)
+            for ext in ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg', '.mp4']:
+                candidate = base + ext
+                if os.path.exists(candidate):
+                    return candidate
+                    
             return prep_path
-            
-        base, _ = os.path.splitext(prep_path)
-        for ext in ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg', '.mp4']:
-            candidate = base + ext
-            if os.path.exists(candidate):
-                return candidate
+
+        # Fallback file search if info is None
+        clean_title = re.sub(r'[\\/*?:"<>|]', "", task.title).strip()
+        for fname in os.listdir(task.output_path):
+            if clean_title.lower() in fname.lower():
+                return os.path.join(task.output_path, fname)
                 
-        return prep_path
+        return task.output_path
 
     def _run_ydl(self, task, ydl_opts):
+        ydl_opts = apply_auto_cookies(ydl_opts)
+        if self._ffmpeg_path and 'ffmpeg_location' not in ydl_opts:
+            ydl_opts['ffmpeg_location'] = self._ffmpeg_path
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(task.url, download=True)
-                if info:
-                    if info.get('_type') == 'playlist':
-                        entries = info.get('entries', [])
-                        for entry in entries:
-                            if entry:
-                                title = entry.get('title', task.title)
-                                self._cleanup_thumbnail_files(task.output_path, title)
-                                if title not in self.finished_titles:
-                                    self.finished_titles.add(title)
-                                    final_path = self._get_final_path(entry, ydl, task)
-                                    sub_task = self.sub_tasks_map.get(title) or DownloadTask(
-                                        url=task.url,
-                                        options=task.options,
-                                        output_path=task.output_path,
-                                        title=title,
-                                        file_type=task.file_type,
-                                        task_id=str(uuid.uuid4())
-                                    )
-                                    self._loop.call_soon_threadsafe(self.finished_cb, sub_task, {
-                                        'title': title,
-                                        'ext': entry.get('ext'),
-                                        'path': final_path
-                                    })
-                        # Mark parent playlist task finished at the end of playlist execution
-                        self._loop.call_soon_threadsafe(self.finished_cb, task, {
-                            'title': task.title,
-                            'ext': '',
-                            'path': task.output_path
-                        })
-                    else:
-                        title = info.get('title') or task.title
-                        self._cleanup_thumbnail_files(task.output_path, title)
-                        final_path = self._get_final_path(info, ydl, task)
-                        target_task = self.sub_tasks_map.get(title) or task
-                        self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
-                            'title': title, 
-                            'ext': info.get('ext'), 
-                            'path': final_path
-                        })
+                
+                # If info is None due to ignoreerrors on non-critical assets (like subtitles)
+                if not info:
+                    try:
+                        info = ydl.extract_info(task.url, download=False)
+                    except Exception:
+                        info = {'title': task.title}
+
+                if info.get('_type') == 'playlist':
+                    entries = info.get('entries', [])
+                    for entry in entries:
+                        if entry:
+                            title = entry.get('title', task.title)
+                            self._cleanup_thumbnail_files(task.output_path, title)
+                            if title not in self.finished_titles:
+                                self.finished_titles.add(title)
+                                final_path = self._get_final_path(entry, ydl, task)
+                                sub_task = self.sub_tasks_map.get(title) or DownloadTask(
+                                    url=task.url,
+                                    options=task.options,
+                                    output_path=task.output_path,
+                                    title=title,
+                                    file_type=task.file_type,
+                                    task_id=str(uuid.uuid4())
+                                )
+                                self._loop.call_soon_threadsafe(self.finished_cb, sub_task, {
+                                    'title': title,
+                                    'ext': entry.get('ext'),
+                                    'path': final_path
+                                })
+                    # Mark parent playlist task finished at the end of playlist execution
+                    self._loop.call_soon_threadsafe(self.finished_cb, task, {
+                        'title': task.title,
+                        'ext': '',
+                        'path': task.output_path
+                    })
                 else:
-                    target_task = self.current_sub_task if self.current_sub_task else task
-                    self._loop.call_soon_threadsafe(self.error_cb, target_task, "Error o elemento saltado.")
+                    title = info.get('title') or task.title
+                    self._cleanup_thumbnail_files(task.output_path, title)
+                    final_path = self._get_final_path(info, ydl, task)
+                    target_task = self.sub_tasks_map.get(title) or task
+                    self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
+                        'title': title, 
+                        'ext': info.get('ext', 'mp4'), 
+                        'path': final_path
+                    })
         except Exception as e:
             target_task = self.current_sub_task if self.current_sub_task else task
             self._loop.call_soon_threadsafe(self.error_cb, target_task, str(e))
@@ -232,7 +269,7 @@ class DownloadManager:
             
             # ONLY trigger finished_cb if the EmbedThumbnail / final postprocessor has completed (or if no embed pp)
             pp_name = d.get('postprocessor', '')
-            if pp_name in ['EmbedThumbnail', 'FFmpegMetadata', ''] or not sub_task:
+            if pp_name in ['EmbedThumbnail', 'FFmpegMetadata', 'FFmpegEmbedSubtitle', ''] or not sub_task:
                 if sub_task and title and title not in self.finished_titles:
                     self.finished_titles.add(title)
                     prep_path = d.get('filepath') or info.get('_filename') or info.get('filepath') or ''
@@ -283,13 +320,19 @@ class InfoExtractor:
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'extract_flat': 'in_playlist'
+            'extract_flat': 'in_playlist',
+            'nocheckcertificate': True,
         }
+        ff_loc = get_ffmpeg_location()
+        if ff_loc:
+            ydl_opts['ffmpeg_location'] = ff_loc
+
         loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as executor:
             return await loop.run_in_executor(executor, InfoExtractor._run_ydl, url, ydl_opts)
 
     @staticmethod
     def _run_ydl(url, ydl_opts):
+        ydl_opts = apply_auto_cookies(ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             return ydl.extract_info(url, download=False)

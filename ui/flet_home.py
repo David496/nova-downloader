@@ -349,7 +349,13 @@ class HomeView(ft.Column):
             pass
 
     async def on_analyze_error(self, err):
-        self.status_text.value = f"Error: {err}"
+        err_str = str(err).lower()
+        if any(kw in err_str for kw in ["confirm your age", "inappropriate for some users", "age-restricted", "sign in to confirm", "requested format is not available"]):
+            self.status_text.value = "⚠️ Este video tiene restricción de edad (+18) y no se puede descargar."
+            self.status_text.color = ft.Colors.AMBER_400
+        else:
+            self.status_text.value = f"Error: {err}"
+            self.status_text.color = ft.Colors.RED_400
         self.progress_ring.visible = False
         self.analyze_btn.disabled = False
         try:
@@ -365,10 +371,10 @@ class HomeView(ft.Column):
         config.get("language", "es")
 
         video_qualities = [
-            ("4K Ultra HD", "Calidad máxima (2160p)", {'format': 'bestvideo[height<=2160][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'}),
-            ("1080p Full HD", "Alta definición", {'format': 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'}),
-            ("720p HD", "Calidad estándar", {'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'}),
-            ("480p / 360p", "Ahorro de datos", {'format': 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'}),
+            ("4K Ultra HD", "Calidad máxima (2160p)", {'format': 'bestvideo[height<=2160]+bestaudio/best[height<=2160]/best', 'merge_output_format': 'mp4'}),
+            ("1080p Full HD", "Alta definición (1080p)", {'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best', 'merge_output_format': 'mp4'}),
+            ("720p HD", "Calidad estándar (720p)", {'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best', 'merge_output_format': 'mp4'}),
+            ("480p / 360p", "Ahorro de datos", {'format': 'bestvideo[height<=480]+bestaudio/best[height<=480]/best', 'merge_output_format': 'mp4'}),
         ]
         
         embed_meta = config.get("embed_metadata", True)
