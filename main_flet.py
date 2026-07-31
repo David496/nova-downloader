@@ -180,6 +180,17 @@ async def main(page: ft.Page):
         )
     )
     
+    def on_window_event(e):
+        if e.data in ["close", "window_close"]:
+            try:
+                if hasattr(player_view, "qt_player") and player_view.qt_player:
+                    player_view.qt_player.stop()
+            except Exception:
+                pass
+            os._exit(0)
+
+    page.window.on_event = on_window_event
+
     AppEvents.subscribe(apply_settings)
     apply_settings()
 
