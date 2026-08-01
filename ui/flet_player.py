@@ -77,33 +77,41 @@ class PlayerView(ft.Column):
     def _get_downloaded_sets(self):
         urls = set()
         titles = set()
+        dir_files = set()
+        try:
+            output_dir = config.get("download_dir", os.path.expanduser("~/Downloads"))
+            if os.path.exists(output_dir):
+                dir_files = {f.lower() for f in os.listdir(output_dir)}
+        except Exception:
+            pass
+
         try:
             history = db.get_history()
             for row in history:
                 file_path = row[7] if len(row) > 7 else ""
-                if file_path and os.path.exists(file_path):
-                    if row[2]:
-                        urls.add(row[2].strip().lower())
-                    if row[1]:
-                        titles.add(row[1].strip().lower())
+                if file_path:
+                    fname = os.path.basename(file_path).lower()
+                    if fname in dir_files or os.path.exists(file_path):
+                        if row[2]:
+                            urls.add(row[2].strip().lower())
+                        if row[1]:
+                            titles.add(row[1].strip().lower())
         except Exception:
             pass
-        return urls, titles
+        return urls, titles, dir_files
 
-    def _is_track_downloaded(self, track, downloaded_urls, downloaded_titles):
+    def _is_track_downloaded(self, track, downloaded_urls, downloaded_titles, dir_files=None):
         clean_t = self._sanitize_filename(track.title).lower()
         t_url = (track.url or "").strip().lower()
         
         if (t_url in downloaded_urls) or (clean_t in downloaded_titles) or (track.title.strip().lower() in downloaded_titles):
             return True
 
-        output_dir = config.get("download_dir", os.path.expanduser("~/Downloads"))
-        clean_fname = self._sanitize_filename(track.title)
-        for ext in ['.mp3', '.m4a', '.webm', '.opus', '.wav']:
-            fname = f"{clean_fname}{ext}"
-            if os.path.exists(os.path.join(output_dir, fname)):
-                return True
-
+        if dir_files is not None:
+            clean_fname = self._sanitize_filename(track.title).lower()
+            for ext in ['.mp3', '.m4a', '.webm', '.opus', '.wav', '.mp4']:
+                if f"{clean_fname}{ext}" in dir_files:
+                    return True
         return False
 
     def _update_hero_ui(self):
@@ -213,34 +221,32 @@ class PlayerView(ft.Column):
 
         self.loading_ring = ft.ProgressRing(visible=False, width=20, height=20, stroke_width=2.5, color=ft.Colors.PURPLE_400)
 
+        self.save_playlist_btn = ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.PUSH_PIN_ROUNDED,
+                icon_color=ft.Colors.PURPLE_300,
+                icon_size=18,
+                tooltip="Guardar Playlist de YouTube" if lang == "es" else "Pin YouTube Playlist",
+                on_click=self.on_save_playlist_click
+            ),
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            border_radius=14,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE)),
+            height=44,
+            alignment=ft.Alignment.CENTER,
+            ink=True,
+            ink_color=ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)
+        )
+
         search_row = ft.Row([
             self.search_input,
             self.paste_btn,
+            self.save_playlist_btn,
             self.search_btn,
             self.loading_ring
         ], spacing=8, alignment=ft.MainAxisAlignment.START)
 
-        # Quick Search Chips
-        def create_chip(label, query_text):
-            return ft.Container(
-                content=ft.Text(label, size=11, color=ft.Colors.PURPLE_200, weight=ft.FontWeight.W_500),
-                padding=ft.Padding(10, 4, 10, 4),
-                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.PURPLE_500),
-                border_radius=10,
-                border=ft.Border.all(1, ft.Colors.with_opacity(0.14, ft.Colors.PURPLE_400)),
-                ink=True,
-                ink_color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_400),
-                on_click=lambda _: asyncio.create_task(self.on_quick_chip_click(query_text))
-            )
-
-        quick_chips_row = ft.Row([
-            ft.Text("Búsqueda rápida:" if lang == "es" else "Quick Search:", size=11, color=ft.Colors.GREY_400, weight=ft.FontWeight.W_600),
-            create_chip("🔥 Éxitos", "top hits 2026"),
-            create_chip("☕ Lo-Fi", "lofi hip hop beats"),
-            create_chip("🎸 Rock", "rock classics"),
-            create_chip("🎧 Electronic", "edm music"),
-            create_chip("🎹 Piano", "relaxing piano music")
-        ], spacing=8, scroll=ft.ScrollMode.AUTO)
+        self.saved_playlists_row = ft.Row([], spacing=8, scroll=ft.ScrollMode.AUTO)
 
         # ---------------- HERO PLAYER CARD (MORE PADDING & GENEROUS MARGINS) ----------------
         self.thumbnail_img = ft.Image(
@@ -484,16 +490,89 @@ class PlayerView(ft.Column):
         self.controls.extend([
             header,
             search_row,
-            quick_chips_row,
+            self.saved_playlists_row,
             main_layout
         ])
         
         self._update_queue_ui()
+        self._refresh_saved_playlists_ui()
 
-    async def on_quick_chip_click(self, query):
-        self.search_input.value = query
+    def _refresh_saved_playlists_ui(self):
+        lang = config.get("language", "es")
+        saved_items = db.get_saved_playlists() or []
+        
+        chips = [
+            ft.Text("📌 Playlists guardadas:" if lang == "es" else "📌 Pinned Playlists:", size=11, color=ft.Colors.GREY_400, weight=ft.FontWeight.W_600)
+        ]
+
+        if not saved_items:
+            chips.append(
+                ft.Text("Pega un enlace de playlist de YouTube y pulsa 📌 para fijarla aquí" if lang == "es" else "Paste a YouTube playlist URL and click 📌 to pin it here", size=11, color=ft.Colors.GREY_500, italic=True)
+            )
+        else:
+            for item in saved_items:
+                p_id, p_title, p_url, p_thumb, p_count, p_date = item
+                chips.append(self._create_saved_playlist_chip(p_id, p_title, p_url, p_thumb, p_count))
+
+        self.saved_playlists_row.controls = chips
+        try:
+            self.saved_playlists_row.update()
+        except Exception:
+            self._safe_update()
+
+    def _create_saved_playlist_chip(self, p_id, title, url, thumb, count):
+        lang = config.get("language", "es")
+        disp_title = (title[:22] + "...") if len(title) > 25 else title
+        count_str = f" • {count} canciones" if count > 0 else ""
+        
+        return ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=ft.Colors.PURPLE_300, size=15),
+                ft.Text(f"{disp_title}{count_str}", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
+                ft.IconButton(
+                    icon=ft.Icons.CLOSE_ROUNDED,
+                    icon_color=ft.Colors.GREY_400,
+                    icon_size=12,
+                    tooltip="Quitar de guardados" if lang == "es" else "Remove pinned",
+                    on_click=lambda _: asyncio.create_task(self.delete_saved_playlist(p_id))
+                )
+            ], spacing=2, alignment=ft.MainAxisAlignment.CENTER),
+            padding=ft.Padding(8, 2, 4, 2),
+            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500),
+            border_radius=12,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_400)),
+            ink=True,
+            ink_color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_400),
+            on_click=lambda _: asyncio.create_task(self.load_saved_playlist(url))
+        )
+
+    async def delete_saved_playlist(self, p_id):
+        db.delete_saved_playlist(p_id)
+        self._refresh_saved_playlists_ui()
+
+    async def load_saved_playlist(self, url):
+        self.search_input.value = url
         self._safe_update()
         await self.on_search(None)
+
+    async def on_save_playlist_click(self, e=None):
+        url = self.search_input.value.strip()
+        if not url and self.queue and self.current_track:
+            url = self.current_track.url
+
+        if not url:
+            return
+
+        title = "Playlist Guardada"
+        thumb = ""
+        count = len(self.queue)
+        
+        if self.queue:
+            title = self.queue[0].title
+            thumb = self.queue[0].thumbnail
+
+        db.add_saved_playlist(title=title, url=url, thumbnail=thumb, track_count=count)
+        self._refresh_saved_playlists_ui()
 
     def clear_queue(self, e=None):
         self.queue.clear()
@@ -566,7 +645,7 @@ class PlayerView(ft.Column):
                 self._safe_update()
             return
 
-        downloaded_urls, downloaded_titles = self._get_downloaded_sets()
+        downloaded_urls, downloaded_titles, dir_files = self._get_downloaded_sets()
 
         for idx, track in enumerate(self.queue):
             is_active = idx == self.current_index
@@ -574,7 +653,7 @@ class PlayerView(ft.Column):
             clean_t = self._sanitize_filename(track.title).lower()
             t_url = (track.url or "").strip().lower()
             
-            is_downloaded = self._is_track_downloaded(track, downloaded_urls, downloaded_titles)
+            is_downloaded = self._is_track_downloaded(track, downloaded_urls, downloaded_titles, dir_files)
             is_downloading = not is_downloaded and ((t_url in self.active_download_urls) or (clean_t in self.active_download_titles))
 
             if is_active:
@@ -842,9 +921,19 @@ class PlayerView(ft.Column):
             self.play_next()
 
     def _on_audio_error(self):
-        """Called automatically if QMediaPlayer encounters an expired link or playback error."""
+        """Called automatically if QMediaPlayer encounters an expired link, stall timeout, or playback error."""
         if self.current_track:
-            asyncio.create_task(self.play_track_at(self.current_index, force_refresh=True))
+            saved_pos = getattr(self.audio_player, 'position_sec', 0)
+            asyncio.create_task(self._auto_recover_playback(saved_pos))
+
+    async def _auto_recover_playback(self, resume_sec=0):
+        if self.current_track and self.current_index >= 0:
+            fresh_url = await self.player_service.resolve_stream_url(self.current_track, force_refresh=True)
+            if fresh_url:
+                self.audio_player.play_url(fresh_url)
+                if resume_sec > 5:
+                    await asyncio.sleep(0.3)
+                    self.audio_player.seek(resume_sec)
 
     async def _poll_download_completion(self, clean_title, t_url):
         output_dir = config.get("download_dir", os.path.expanduser("~/Downloads"))

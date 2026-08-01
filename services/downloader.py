@@ -1,5 +1,6 @@
 import yt_dlp
 import asyncio
+import time
 import threading
 import os
 import uuid
@@ -42,6 +43,7 @@ class DownloadManager:
         self._loop = None
         self._stop_event = threading.Event()
         self._ffmpeg_path = get_ffmpeg_location()
+        self._last_progress_times = {}
 
     async def start(self):
         self._loop = asyncio.get_running_loop()
@@ -310,7 +312,12 @@ class DownloadManager:
         self.current_sub_task = self.sub_tasks_map[current_title]
             
         if d['status'] == 'downloading':
-            self._loop.call_soon_threadsafe(self.progress_cb, self.current_sub_task, d)
+            now = time.time()
+            t_id = self.current_sub_task.task_id
+            last_t = self._last_progress_times.get(t_id, 0)
+            if (now - last_t) >= 0.15:
+                self._last_progress_times[t_id] = now
+                self._loop.call_soon_threadsafe(self.progress_cb, self.current_sub_task, d)
         elif d['status'] == 'finished':
             self._loop.call_soon_threadsafe(self.progress_cb, self.current_sub_task, {'status': 'converting', 'filename': d.get('filename')})
 

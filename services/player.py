@@ -20,6 +20,7 @@ import time
 import threading
 import queue
 import re
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from PySide6.QtCore import QCoreApplication, QUrl, QTimer
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaDevices
@@ -48,6 +49,8 @@ class QtAudioPlayer:
         self.media_devices = None
         self.app = None
         self.cmd_queue = queue.Queue()
+        self._last_emitted_sec = -1
+        self.stall_timer = None
         self._init_qt()
 
     def set_loop(self, loop):
@@ -105,6 +108,8 @@ class QtAudioPlayer:
                         elif cmd == 'resume':
                             self.player.play()
                         elif cmd == 'stop':
+                            if self.stall_timer and self.stall_timer.isActive():
+                                self.stall_timer.stop()
                             self.player.stop()
                         elif cmd == 'seek':
                             self.player.setPosition(int(args[0] * 1000))
@@ -115,9 +120,14 @@ class QtAudioPlayer:
                 self.app.processEvents()
 
             self.timer = QTimer()
-            self.timer.setInterval(30)
+            self.timer.setInterval(50) # Process commands cleanly without CPU spikes
             self.timer.timeout.connect(process_q)
             self.timer.start()
+
+            self.stall_timer = QTimer()
+            self.stall_timer.setSingleShot(True)
+            self.stall_timer.setInterval(2000) # 2-second stall watchdog for YouTube CDN drops
+            self.stall_timer.timeout.connect(self._on_stall_timeout)
 
             if hasattr(self.app, 'exec'):
                 self.app.exec()
@@ -132,8 +142,36 @@ class QtAudioPlayer:
                 break
             time.sleep(0.05)
 
+    def _on_stall_timeout(self):
+        """Fires if QMediaPlayer stays stuck in StalledMedia for > 2s."""
+        if self.is_playing and self.player and self.player.mediaStatus() == QMediaPlayer.MediaStatus.StalledMedia:
+            if self.on_error:
+                if self.loop:
+                    try:
+                        self.loop.call_soon_threadsafe(self.on_error)
+                    except Exception:
+                        pass
+                else:
+                    try:
+                        self.on_error()
+                    except Exception:
+                        pass
+
     def _handle_position(self, pos_ms):
         self.position_sec = pos_ms / 1000.0
+        
+        # Near-end seamless transition check (within 1.2s of song end)
+        if self.is_playing and self.duration_sec > 5 and self.position_sec >= (self.duration_sec - 1.2):
+            self._handle_status(QMediaPlayer.MediaStatus.EndOfMedia)
+            return
+
+        current_sec = int(self.position_sec)
+        
+        # Throttle position callback to once per second to prevent Flet IPC saturation
+        if current_sec == self._last_emitted_sec:
+            return
+        self._last_emitted_sec = current_sec
+
         if self.on_position:
             if self.loop:
                 try:
@@ -150,7 +188,13 @@ class QtAudioPlayer:
         self.duration_sec = dur_ms / 1000.0
 
     def _handle_status(self, status):
-        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+        if status == QMediaPlayer.MediaStatus.LoadedMedia or status == QMediaPlayer.MediaStatus.BufferedMedia:
+            if self.stall_timer and self.stall_timer.isActive():
+                self.stall_timer.stop()
+
+        elif status == QMediaPlayer.MediaStatus.EndOfMedia:
+            if self.stall_timer and self.stall_timer.isActive():
+                self.stall_timer.stop()
             self.is_playing = False
             if self.on_finished:
                 if self.loop:
@@ -163,7 +207,10 @@ class QtAudioPlayer:
                         self.on_finished()
                     except Exception:
                         pass
+
         elif status == QMediaPlayer.MediaStatus.InvalidMedia:
+            if self.stall_timer and self.stall_timer.isActive():
+                self.stall_timer.stop()
             self.is_playing = False
             if self.on_error:
                 if self.loop:
@@ -176,16 +223,19 @@ class QtAudioPlayer:
                         self.on_error()
                     except Exception:
                         pass
+
         elif status == QMediaPlayer.MediaStatus.StalledMedia:
-            # Auto-recover from temporary buffer underruns
             if self.player and self.is_playing:
                 try:
                     self.player.play()
                 except Exception:
                     pass
+                if self.stall_timer and not self.stall_timer.isActive():
+                    self.stall_timer.start()
 
     def play_url(self, stream_url):
         self.is_playing = True
+        self._last_emitted_sec = -1
         self.cmd_queue.put(('play_url', (stream_url,)))
 
     def pause(self):
@@ -198,9 +248,11 @@ class QtAudioPlayer:
 
     def stop(self):
         self.is_playing = False
+        self._last_emitted_sec = -1
         self.cmd_queue.put(('stop', ()))
 
     def seek(self, target_sec):
+        self._last_emitted_sec = -1
         self.cmd_queue.put(('seek', (target_sec,)))
 
     def set_volume(self, volume_val):
@@ -210,6 +262,11 @@ class PlayerService:
     def __init__(self):
         self.executor = ThreadPoolExecutor(max_workers=4)
         self.stream_cache = {}
+        self.temp_cache_dir = os.path.join(tempfile.gettempdir(), "nova_stream_cache")
+        try:
+            os.makedirs(self.temp_cache_dir, exist_ok=True)
+        except Exception:
+            pass
 
     async def search_or_extract(self, query):
         query = query.strip()
@@ -292,13 +349,20 @@ class PlayerService:
             track.stream_url = None
             self.stream_cache.pop(track.url, None)
 
-        if track.stream_url:
+        # Check local temp stream cache file
+        clean_title = re.sub(r'[\\/*?:"<>|]', "", track.title).strip()
+        cached_file = os.path.join(self.temp_cache_dir, f"{clean_title}.m4a")
+        if os.path.exists(cached_file) and os.path.getsize(cached_file) > 100000:
+            track.stream_url = cached_file
+            return cached_file
+
+        if track.stream_url and not force_refresh:
             return track.stream_url
 
         if track.url in self.stream_cache and not force_refresh:
             cached_url = self.stream_cache[track.url]
             track.stream_url = cached_url
-            return track.stream_url
+            return cached_url
 
         loop = asyncio.get_running_loop()
         stream_url = await loop.run_in_executor(self.executor, self._run_resolve, track.url)
