@@ -161,11 +161,42 @@ class SettingsView(ft.Column):
             border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
         )
 
+        # Section 5: Caché y Almacenamiento Temporal
+        self.cache_status_lbl = ft.Text("", size=11, color=ft.Colors.GREEN_400, weight=ft.FontWeight.BOLD)
+
+        cache_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.CLEANING_SERVICES_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Text("Caché de Reproducción Online" if lang == "es" else "Online Player Cache", size=15, weight=ft.FontWeight.W_600),
+                ], spacing=8),
+                ft.Row([
+                    ft.Text("Libera espacio eliminado las canciones temporales almacenadas." if lang == "es" else "Free up disk space by deleting temporary cached tracks.", size=12, color=ft.Colors.GREY_400, expand=True),
+                    ft.ElevatedButton(
+                        "Vaciar Caché" if lang == "es" else "Clear Cache",
+                        icon=ft.Icons.DELETE_SWEEP_ROUNDED,
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=10),
+                            bgcolor=ft.Colors.PURPLE_700,
+                            color=ft.Colors.WHITE,
+                        ),
+                        height=38,
+                        on_click=self.clear_player_cache,
+                    )
+                ], spacing=8),
+                self.cache_status_lbl
+            ], spacing=10),
+            padding=14,
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+            border_radius=14,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
+        )
+
         # About Footer Card with Developer Credit
         about_card = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.CODE_ROUNDED, color=ft.Colors.PURPLE_300, size=18),
-                ft.Text("Nova Downloader v2.0 • Desarrollado por David496", size=12, color=ft.Colors.PURPLE_300, weight=ft.FontWeight.W_600),
+                ft.Text("Nova Downloader v2.1.0 • Desarrollado por David496", size=12, color=ft.Colors.PURPLE_300, weight=ft.FontWeight.W_600),
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
             padding=12,
             alignment=ft.Alignment.CENTER
@@ -175,9 +206,35 @@ class SettingsView(ft.Column):
             path_card,
             meta_card,
             subs_card,
+            cache_card,
             ui_card,
             about_card
         ])
+
+    def clear_player_cache(self, e):
+        import os, tempfile
+        cache_dir = os.path.join(tempfile.gettempdir(), "nova_stream_cache")
+        count = 0
+        try:
+            if os.path.exists(cache_dir):
+                for f in os.listdir(cache_dir):
+                    f_path = os.path.join(cache_dir, f)
+                    try:
+                        if os.path.isfile(f_path):
+                            os.remove(f_path)
+                            count += 1
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        
+        lang = config.get("language", "es")
+        msg = f"Caché liberada ({count} archivos eliminados)" if lang == "es" else f"Cache cleared ({count} files removed)"
+        self.cache_status_lbl.value = f"✓ {msg}"
+        try:
+            self.cache_status_lbl.update()
+        except Exception:
+            pass
 
     def pick_folder(self, e):
         root = tk.Tk()

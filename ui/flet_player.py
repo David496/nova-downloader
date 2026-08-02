@@ -423,10 +423,13 @@ class PlayerView(ft.Column):
         self.hero_card = ft.Container(
             content=ft.Column([
                 badge_header_row,
+                
                 ft.Row([self.thumbnail_img, self.placeholder_icon], alignment=ft.MainAxisAlignment.CENTER),
+                
+                # Title & Artist Column
                 ft.Column([
                     self.track_title,
-                    self.track_artist,
+                    self.track_artist
                 ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 
                 ft.Column([
@@ -510,9 +513,28 @@ class PlayerView(ft.Column):
                 ft.Text("Pega un enlace de playlist de YouTube y pulsa 📌 para fijarla aquí" if lang == "es" else "Paste a YouTube playlist URL and click 📌 to pin it here", size=11, color=ft.Colors.GREY_500, italic=True)
             )
         else:
-            for item in saved_items:
+            # Display up to 4 recent playlist chips
+            recent_items = saved_items[:4]
+            for item in recent_items:
                 p_id, p_title, p_url, p_thumb, p_count, p_date = item
                 chips.append(self._create_saved_playlist_chip(p_id, p_title, p_url, p_thumb, p_count))
+
+            if len(saved_items) > 4 or True: # Always allow opening full collection dialog
+                chips.append(
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.FOLDER_SPECIAL_ROUNDED, color=ft.Colors.PURPLE_300, size=15),
+                            ft.Text(f"Ver todas ({len(saved_items)}) →" if lang == "es" else f"View all ({len(saved_items)}) →", size=11, color=ft.Colors.PURPLE_200, weight=ft.FontWeight.BOLD)
+                        ], spacing=4),
+                        padding=ft.Padding(10, 3, 10, 3),
+                        bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_600),
+                        border_radius=12,
+                        border=ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400)),
+                        ink=True,
+                        ink_color=ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400),
+                        on_click=lambda ev: self.open_all_playlists_modal(ev)
+                    )
+                )
 
         self.saved_playlists_row.controls = chips
         try:
@@ -522,22 +544,25 @@ class PlayerView(ft.Column):
 
     def _create_saved_playlist_chip(self, p_id, title, url, thumb, count):
         lang = config.get("language", "es")
-        disp_title = (title[:22] + "...") if len(title) > 25 else title
-        count_str = f" • {count} canciones" if count > 0 else ""
+        disp_title = (title[:18] + "...") if len(title) > 20 else title
+        count_str = f" • {count}" if count > 0 else ""
         
+        close_btn = ft.Container(
+            content=ft.Icon(ft.Icons.CLOSE_ROUNDED, color=ft.Colors.GREY_400, size=12),
+            padding=ft.Padding(2, 2, 2, 2),
+            tooltip="Quitar de guardados" if lang == "es" else "Remove pinned",
+            on_click=lambda _: asyncio.create_task(self.delete_saved_playlist(p_id)),
+            ink=True,
+            border_radius=8
+        )
+
         return ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=ft.Colors.PURPLE_300, size=15),
                 ft.Text(f"{disp_title}{count_str}", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
-                ft.IconButton(
-                    icon=ft.Icons.CLOSE_ROUNDED,
-                    icon_color=ft.Colors.GREY_400,
-                    icon_size=12,
-                    tooltip="Quitar de guardados" if lang == "es" else "Remove pinned",
-                    on_click=lambda _: asyncio.create_task(self.delete_saved_playlist(p_id))
-                )
-            ], spacing=2, alignment=ft.MainAxisAlignment.CENTER),
-            padding=ft.Padding(8, 2, 4, 2),
+                close_btn
+            ], spacing=4, alignment=ft.MainAxisAlignment.CENTER),
+            padding=ft.Padding(10, 3, 8, 3),
             bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500),
             border_radius=12,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_400)),
@@ -545,6 +570,147 @@ class PlayerView(ft.Column):
             ink_color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_400),
             on_click=lambda _: asyncio.create_task(self.load_saved_playlist(url))
         )
+
+    def open_all_playlists_modal(self, e=None):
+        import traceback
+        print("🔍 Intento de apertura de modal 'Mis Playlists Guardadas'...")
+        
+        target_page = getattr(self, 'page', None)
+        if not target_page and e and hasattr(e, 'control') and e.control:
+            target_page = e.control.page
+        if not target_page and e and hasattr(e, 'page') and e.page:
+            target_page = e.page
+
+        if not target_page:
+            print("⚠️ Error: No se pudo obtener la referencia de 'page' para abrir el modal.")
+            return
+
+        try:
+            lang = config.get("language", "es")
+            saved_items = db.get_saved_playlists() or []
+            print(f"📋 Cargando {len(saved_items)} playlists guardadas en el modal...")
+
+            modal_search = ft.TextField(
+                hint_text="Buscar en tus playlists..." if lang == "es" else "Search saved playlists...",
+                prefix_icon=ft.Icons.SEARCH_ROUNDED,
+                height=40,
+                text_size=12,
+                border_radius=10,
+                content_padding=ft.Padding(10, 0, 10, 0),
+                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+                border_color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                focused_border_color=ft.Colors.PURPLE_400
+            )
+
+            list_col = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO)
+
+            def close_dialog(ev=None):
+                dlg.open = False
+                try:
+                    target_page.update()
+                except Exception:
+                    pass
+
+            def render_modal_items(query=""):
+                list_col.controls.clear()
+                q = query.strip().lower()
+                filtered = [item for item in saved_items if (not q or q in item[1].lower() or q in item[2].lower())]
+
+                if not filtered:
+                    list_col.controls.append(
+                        ft.Container(
+                            content=ft.Text("No se encontraron playlists" if lang == "es" else "No playlists found", color=ft.Colors.GREY_400, size=12),
+                            alignment=ft.Alignment.CENTER,
+                            padding=20
+                        )
+                    )
+                else:
+                    for p_id, p_title, p_url, p_thumb, p_count, p_date in filtered:
+                        disp_t = (p_title[:45] + "...") if len(p_title) > 48 else p_title
+                        count_lbl = f"{p_count} canciones" if p_count > 0 else "Playlist"
+
+                        async def load_and_close(target_url):
+                            close_dialog()
+                            await self.load_saved_playlist(target_url)
+
+                        async def delete_and_refresh(target_id):
+                            db.delete_saved_playlist(target_id)
+                            self._refresh_saved_playlists_ui()
+                            render_modal_items(modal_search.value or "")
+                            try:
+                                target_page.update()
+                            except Exception:
+                                pass
+
+                        item_card = ft.Container(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                                ft.Column([
+                                    ft.Text(disp_t, weight=ft.FontWeight.BOLD, size=12, color=ft.Colors.WHITE, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                    ft.Text(f"{count_lbl} • Agregado {p_date[:10] if p_date else ''}", size=10, color=ft.Colors.GREY_400)
+                                ], spacing=1, expand=True),
+                                ft.ElevatedButton(
+                                    "▶️ Cargar" if lang == "es" else "▶️ Load",
+                                    style=ft.ButtonStyle(
+                                        shape=ft.RoundedRectangleBorder(radius=8),
+                                        bgcolor=ft.Colors.PURPLE_600,
+                                        color=ft.Colors.WHITE
+                                    ),
+                                    height=32,
+                                    on_click=lambda _, u=p_url: asyncio.create_task(load_and_close(u))
+                                ),
+                                ft.IconButton(
+                                    icon=ft.Icons.DELETE_OUTLINED,
+                                    icon_color=ft.Colors.RED_400,
+                                    icon_size=18,
+                                    tooltip="Eliminar playlist" if lang == "es" else "Delete playlist",
+                                    on_click=lambda _, i=p_id: asyncio.create_task(delete_and_refresh(i))
+                                )
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=8),
+                            padding=ft.Padding(10, 8, 10, 8),
+                            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+                            border_radius=10,
+                            border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
+                        )
+                        list_col.controls.append(item_card)
+
+                try:
+                    list_col.update()
+                except Exception:
+                    pass
+
+            modal_search.on_change = lambda ev: render_modal_items(ev.control.value)
+            render_modal_items("")
+
+            dlg = ft.AlertDialog(
+                title=ft.Row([
+                    ft.Icon(ft.Icons.LIBRARY_MUSIC_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                    ft.Text(f"Mis Playlists Guardadas ({len(saved_items)})" if lang == "es" else f"Saved Playlists ({len(saved_items)})", size=16, weight=ft.FontWeight.BOLD)
+                ], spacing=8),
+                content=ft.Container(
+                    content=ft.Column([
+                        modal_search,
+                        ft.Container(content=list_col, height=320, expand=True)
+                    ], spacing=10),
+                    width=520,
+                    height=380,
+                    padding=5
+                ),
+                actions=[
+                    ft.TextButton("Cerrar" if lang == "es" else "Close", on_click=close_dialog)
+                ],
+                actions_alignment=ft.MainAxisAlignment.END
+            )
+
+            if dlg not in target_page.overlay:
+                target_page.overlay.append(dlg)
+            target_page.dialog = dlg
+            dlg.open = True
+            target_page.update()
+            print("✅ Modal 'Mis Playlists Guardadas' desplegado con éxito en pantalla.")
+        except Exception as err:
+            print(f"❌ Error al abrir el modal de playlists: {err}")
+            traceback.print_exc()
 
     async def delete_saved_playlist(self, p_id):
         db.delete_saved_playlist(p_id)
@@ -563,21 +729,53 @@ class PlayerView(ft.Column):
         if not url:
             return
 
-        title = "Playlist Guardada"
-        thumb = ""
-        count = len(self.queue)
-        
-        if self.queue:
-            title = self.queue[0].title
-            thumb = self.queue[0].thumbnail
+        # Check if URL is a playlist (contains 'list=' or 'playlist' or has multiple tracks)
+        is_playlist_url = ('list=' in url.lower()) or ('playlist' in url.lower())
+        if not is_playlist_url and len(self.queue) <= 1:
+            self.search_input.error_text = "⚠️ Solo se pueden guardar Playlists de YouTube (no videos individuales)"
+            self._safe_update()
+            await asyncio.sleep(3.5)
+            self.search_input.error_text = None
+            self._safe_update()
+            return
 
-        db.add_saved_playlist(title=title, url=url, thumbnail=thumb, track_count=count)
-        self._refresh_saved_playlists_ui()
+        self.loading_ring.visible = True
+        self._safe_update()
+
+        try:
+            title = getattr(self, 'current_playlist_title', None)
+            thumb = self.queue[0].thumbnail if self.queue else ""
+            count = len(self.queue)
+
+            if not title or count == 0:
+                tracks, extracted_title = await self.player_service.search_or_extract(url)
+                if len(tracks) <= 1 and not is_playlist_url:
+                    self.search_input.error_text = "⚠️ Solo se pueden guardar Playlists de YouTube (no videos individuales)"
+                    self._safe_update()
+                    await asyncio.sleep(3.5)
+                    self.search_input.error_text = None
+                    return
+
+                title = extracted_title or (tracks[0].title if tracks else "Playlist de YouTube")
+                if not self.queue and tracks:
+                    self.queue = tracks
+                    count = len(tracks)
+                    thumb = tracks[0].thumbnail
+                    self._update_queue_ui()
+
+            db.add_saved_playlist(title=title, url=url, thumbnail=thumb, track_count=count)
+        except Exception as ex:
+            print(f"Error saving playlist: {ex}")
+        finally:
+            self.loading_ring.visible = False
+            self._safe_update()
+            self._refresh_saved_playlists_ui()
 
     def clear_queue(self, e=None):
         self.queue.clear()
         self.current_index = -1
         self.current_track = None
+        self.current_playlist_title = None
         self.active_download_urls.clear()
         self.active_download_titles.clear()
         self.audio_player.stop()
@@ -611,7 +809,8 @@ class PlayerView(ft.Column):
         self.search_btn.disabled = True
         self._safe_update()
 
-        tracks = await self.player_service.search_or_extract(query)
+        tracks, playlist_title = await self.player_service.search_or_extract(query)
+        self.current_playlist_title = playlist_title
 
         self.loading_ring.visible = False
         self.search_btn.disabled = False
@@ -782,10 +981,14 @@ class PlayerView(ft.Column):
             self.is_loading_track = False
             self._update_hero_ui()
             
-            # Prefetch next track in queue asynchronously
-            next_idx = (index + 1) % len(self.queue) if self.queue else 0
+            # Smart prefetch of the next track (handles both sequential and shuffle modes)
+            if self.is_shuffle:
+                next_idx = random.randint(0, len(self.queue) - 1)
+            else:
+                next_idx = (index + 1) % len(self.queue) if self.queue else 0
+
             if next_idx < len(self.queue) and next_idx != index:
-                asyncio.create_task(self.player_service.resolve_stream_url(self.queue[next_idx]))
+                self.player_service.prebuffer_track(self.queue[next_idx])
         else:
             await asyncio.sleep(1.0)
             self.is_loading_track = False
@@ -921,10 +1124,13 @@ class PlayerView(ft.Column):
             self.play_next()
 
     def _on_audio_error(self):
-        """Called automatically if QMediaPlayer encounters an expired link, stall timeout, or playback error."""
+        """Called automatically if QMediaPlayer encounters an expired link or network error on remote streams."""
         if self.current_track:
-            saved_pos = getattr(self.audio_player, 'position_sec', 0)
-            asyncio.create_task(self._auto_recover_playback(saved_pos))
+            stream_url = getattr(self.current_track, 'stream_url', '') or ''
+            # Only trigger auto-recovery for remote HTTPS streams, NOT for local SSD files!
+            if stream_url.startswith("http://") or stream_url.startswith("https://"):
+                saved_pos = getattr(self.audio_player, 'position_sec', 0)
+                asyncio.create_task(self._auto_recover_playback(saved_pos))
 
     async def _auto_recover_playback(self, resume_sec=0):
         if self.current_track and self.current_index >= 0:

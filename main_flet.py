@@ -51,9 +51,9 @@ async def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
     page.theme = get_theme("dark")
     page.window_width = 1250
-    page.window_height = 820
+    page.window_height = 960
     page.window_min_width = 1050
-    page.window_min_height = 680
+    page.window_min_height = 750
     page.padding = 0
     
     colors_init = AppColors(True)

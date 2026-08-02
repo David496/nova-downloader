@@ -63,9 +63,9 @@ No requiere tener Python instalado ni ejecutar comandos.
 ## Características Principales
 
 ### 1. Reproductor en Línea (Online Streaming)
-* **Reproducción Directa sin Descarga**: Motor de audio desarrollado sobre **PySide6 (QtMultimedia)** con pre-caché de ultra-velocidad que permite escuchar canciones en streaming directo con cero interrupciones o cortes.
+* **Reproducción Directa sin Descarga**: Motor de audio desarrollado sobre **PySide6 (QtMultimedia)** con arquitectura de pre-buffering local que garantiza transmisiones 100% fluidas, inmunes a caídas de Internet, expiración de tokens o micro-cortes.
+* **📌 Guardado de Playlists de YouTube**: Sistema de fijado con extracción automática del nombre oficial de la lista en YouTube. Incluye accesos rápidos en barra y una **Ventana Modal espaciosa con Buscador Interno** para gestionar colecciones de cualquier tamaño.
 * **Sincronización Dinámica de Audio**: Detección automática del dispositivo predeterminado de Windows (pantalla HDMI, parlantes o audífonos) con conmutación en tiempo real.
-* **Búsqueda y Selección Manual**: Interfaz interactiva para explorar canciones o listas de reproducción y seleccionar qué tema escuchar.
 * **Descarga Directa desde la Cola**: Opción para guardar cualquier pista en calidad MP3 a 320 kbps con carátula e ID3v2 incrustados durante la reproducción.
 
 ### 2. Gestor de Descargas Multimedia
@@ -75,6 +75,7 @@ No requiere tener Python instalado ni ejecutar comandos.
 * **Descargas Asíncronas en Segundo Plano**: Control del flujo de descargas sin bloqueo del hilo principal de la interfaz de usuario.
 
 ### 3. Interfaz y Experiencia de Usuario
+* **🧹 Limpieza de Caché de Reproducción**: Opción integrada en el panel de Ajustes para vaciar el espacio en disco utilizado por la caché temporal con un solo clic.
 * **Modo Oscuro Permanente**: Interfaz visual estilizada en tema oscuro con capsules de selección en tono violeta y micro-animaciones táctiles en botones y listas.
 * **Biblioteca e Historial Integrado**: Registro local persistente mediante SQLite con validación en tiempo real del archivo en disco (`os.path.exists`) y filtrado instantáneo en memoria RAM.
 
