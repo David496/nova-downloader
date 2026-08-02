@@ -45,11 +45,11 @@ jobs:
           path: dist/NovaDownloader-Windows-x64.zip
 
       - name: Release to GitHub Releases
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: Nova Downloader v1.0.0
+          tag_name: ${{ github.ref_name }}
+          name: Nova Downloader ${{ github.ref_name }}
           draft: false
           prerelease: false
           files: |
