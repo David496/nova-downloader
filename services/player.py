@@ -74,13 +74,11 @@ class QtAudioPlayer:
             self.player = QMediaPlayer()
             self.audio_output = QAudioOutput()
 
-            # Dynamically bind to current Windows default audio output device & auto-update on device change
+            # Bind to current Windows default audio output device
             try:
                 default_dev = QMediaDevices.defaultAudioOutput()
                 if default_dev:
                     self.audio_output.setDevice(default_dev)
-                self.media_devices = QMediaDevices()
-                self.media_devices.audioOutputsChanged.connect(self._on_audio_device_changed)
             except Exception:
                 pass
 
@@ -158,12 +156,6 @@ class QtAudioPlayer:
 
     def _handle_position(self, pos_ms):
         self.position_sec = pos_ms / 1000.0
-        
-        # Near-end seamless transition check (within 1.2s of song end)
-        if self.is_playing and self.duration_sec > 5 and self.position_sec >= (self.duration_sec - 1.2):
-            self._handle_status(QMediaPlayer.MediaStatus.EndOfMedia)
-            return
-
         current_sec = int(self.position_sec)
         
         # Throttle position callback to once per second to prevent Flet IPC saturation
