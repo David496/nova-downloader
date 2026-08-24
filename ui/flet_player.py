@@ -605,7 +605,13 @@ class PlayerView(ft.Column):
             list_col = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO)
 
             def close_dialog(ev=None):
-                dlg.open = False
+                if hasattr(target_page, "close"):
+                    try:
+                        target_page.close(dlg)
+                    except Exception:
+                        dlg.open = False
+                else:
+                    dlg.open = False
                 try:
                     target_page.update()
                 except Exception:
@@ -702,11 +708,14 @@ class PlayerView(ft.Column):
                 actions_alignment=ft.MainAxisAlignment.END
             )
 
-            if dlg not in target_page.overlay:
-                target_page.overlay.append(dlg)
-            target_page.dialog = dlg
-            dlg.open = True
-            target_page.update()
+            if hasattr(target_page, "open"):
+                target_page.open(dlg)
+            else:
+                if dlg not in target_page.overlay:
+                    target_page.overlay.append(dlg)
+                target_page.dialog = dlg
+                dlg.open = True
+                target_page.update()
             print("✅ Modal 'Mis Playlists Guardadas' desplegado con éxito en pantalla.")
         except Exception as err:
             print(f"❌ Error al abrir el modal de playlists: {err}")
@@ -1089,7 +1098,14 @@ class PlayerView(ft.Column):
         if self.audio_player.duration_sec > 0:
             target_sec = (val / 100.0) * self.audio_player.duration_sec
             self.audio_player.seek(target_sec)
-        self.seek_lock_time = time.time() + 0.3
+            self.current_time_lbl.value = self._format_seconds(target_sec)
+            self.progress_slider.value = val
+            try:
+                self.current_time_lbl.update()
+                self.progress_slider.update()
+            except Exception:
+                pass
+        self.seek_lock_time = time.time() + 0.6
         self.is_user_seeking = False
 
     def _on_audio_position(self, pos_sec, dur_sec):

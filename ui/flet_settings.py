@@ -1,5 +1,6 @@
 import flet as ft
 from core.config import config, save_config
+import asyncio
 import tkinter as tk
 from tkinter import filedialog
 from ui.flet_styles import AppEvents
@@ -236,16 +237,27 @@ class SettingsView(ft.Column):
         except Exception:
             pass
 
-    def pick_folder(self, e):
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-        path = filedialog.askdirectory()
-        root.destroy()
-        
+    def _ask_directory_dialog(self):
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            path = filedialog.askdirectory()
+            root.destroy()
+            return path
+        except Exception as e:
+            print(f"Error opening folder picker: {e}")
+            return ""
+
+    async def pick_folder(self, e):
+        path = await asyncio.to_thread(self._ask_directory_dialog)
         if path:
             self.path_input.value = path
             self.save_settings(None)
+            try:
+                self.path_input.update()
+            except Exception:
+                pass
 
     def save_settings(self, e):
         config["download_dir"] = self.path_input.value

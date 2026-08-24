@@ -196,4 +196,4 @@ async def main(page: ft.Page):
 
 if __name__ == "__main__":
     import sys
-    ft.app(target=main)
+    ft.run(main)

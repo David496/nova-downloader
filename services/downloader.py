@@ -105,6 +105,7 @@ class DownloadManager:
             'quiet': True,
             'no_warnings': True,
             'nocheckcertificate': True,
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
 
         if self._ffmpeg_path:
@@ -174,29 +175,40 @@ class DownloadManager:
         if info and info.get('_type') == 'playlist':
             return task.output_path
         
+        is_video = getattr(task, 'file_type', '') == "video"
+        preferred_exts = ['.mp4', '.mkv', '.webm', '.mov', '.avi'] if is_video else ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg']
+        
         if info:
-            prep_path = ydl.prepare_filename(info)
             reqs = info.get('_requested_downloads', [])
-            if reqs and reqs[0].get('filepath'):
-                if os.path.exists(reqs[0]['filepath']):
-                    return reqs[0]['filepath']
+            if reqs and reqs[0].get('filepath') and os.path.exists(reqs[0]['filepath']):
+                return reqs[0]['filepath']
+                    
+            prep_path = ydl.prepare_filename(info)
+            base, ext = os.path.splitext(prep_path)
+            
+            # Check if file with exact requested type extension exists
+            for e in preferred_exts:
+                candidate = base + e
+                if os.path.exists(candidate):
+                    return candidate
                     
             if os.path.exists(prep_path):
                 return prep_path
                 
-            base, _ = os.path.splitext(prep_path)
-            for ext in ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg', '.mp4']:
-                candidate = base + ext
-                if os.path.exists(candidate):
-                    return candidate
-                    
             return prep_path
 
         # Fallback file search if info is None
-        clean_title = re.sub(r'[\\/*?:"<>|]', "", task.title).strip()
-        for fname in os.listdir(task.output_path):
-            if clean_title.lower() in fname.lower():
-                return os.path.join(task.output_path, fname)
+        clean_title = re.sub(r'[\\/*?:"<>|]', "", task.title).strip().lower()
+        if os.path.exists(task.output_path):
+            try:
+                for fname in os.listdir(task.output_path):
+                    f_lower = fname.lower()
+                    if clean_title in f_lower:
+                        _, f_ext = os.path.splitext(f_lower)
+                        if f_ext in preferred_exts:
+                            return os.path.join(task.output_path, fname)
+            except Exception:
+                pass
                 
         return task.output_path
 
@@ -329,6 +341,7 @@ class InfoExtractor:
             'no_warnings': True,
             'extract_flat': 'in_playlist',
             'nocheckcertificate': True,
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         ff_loc = get_ffmpeg_location()
         if ff_loc:

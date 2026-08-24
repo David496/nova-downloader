@@ -4,8 +4,14 @@ from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "history.db")
 
+def get_connection():
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    conn.execute('PRAGMA journal_mode=WAL;')
+    conn.execute('PRAGMA busy_timeout=5000;')
+    return conn
+
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS downloads (
@@ -35,7 +41,7 @@ def init_db():
         WHERE id NOT IN (
             SELECT MIN(id) 
             FROM downloads 
-            GROUP BY title, path
+            GROUP BY title, path, file_type
         )
     ''')
     conn.commit()
@@ -45,10 +51,10 @@ def add_download(title, url, file_type, quality, size, path):
     if not title or not path:
         return
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute('SELECT id FROM downloads WHERE title = ? AND path = ?', (title, path))
+    cursor.execute('SELECT id FROM downloads WHERE title = ? AND path = ? AND file_type = ?', (title, path, file_type))
     if cursor.fetchone():
         conn.close()
         return
@@ -62,7 +68,7 @@ def add_download(title, url, file_type, quality, size, path):
     conn.close()
 
 def get_history():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM downloads ORDER BY id DESC')
     rows = cursor.fetchall()
@@ -70,14 +76,14 @@ def get_history():
     return rows
 
 def delete_from_history(item_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM downloads WHERE id = ?', (item_id,))
     conn.commit()
     conn.close()
 
 def clear_history():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM downloads')
     conn.commit()
@@ -86,7 +92,7 @@ def clear_history():
 def add_saved_playlist(title, url, thumbnail="", track_count=0):
     if not url:
         return
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute('''
@@ -97,7 +103,7 @@ def add_saved_playlist(title, url, thumbnail="", track_count=0):
     conn.close()
 
 def get_saved_playlists():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT id, title, url, thumbnail, track_count, date FROM saved_playlists ORDER BY id DESC')
@@ -108,7 +114,7 @@ def get_saved_playlists():
     return rows
 
 def delete_saved_playlist(playlist_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM saved_playlists WHERE id = ?', (playlist_id,))
     conn.commit()

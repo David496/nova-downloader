@@ -198,9 +198,12 @@ class LibraryView(ft.Column):
             self.list_container.controls.extend(new_controls)
 
         try:
-            self.update()
+            self.list_container.update()
         except:
-            pass
+            try:
+                self.update()
+            except:
+                pass
 
     def create_list_item(self, item):
         # item: (id, title, url, file_type, quality, date, size, path)

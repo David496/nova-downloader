@@ -189,11 +189,12 @@ class DownloadsView(ft.Column):
         if task.task_id in self.items:
             await self.items[task.task_id].set_finished_async()
 
-        # 2. Matching title search
+        # 2. Matching title and file_type search
         for item in list(self.items.values()):
             it_title = (item.task.title or "").strip().lower()
             if it_title and (it_title == target_title or target_title in it_title or it_title in target_title):
-                await item.set_finished_async()
+                if item.task.file_type == task.file_type:
+                    await item.set_finished_async()
 
         # 3. If this is a parent playlist task finishing, resolve all remaining playlist items
         if task.options.get('yesplaylist'):

@@ -6,14 +6,6 @@ os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.multimedia*=false;qt*=false;d
 os.environ["FFMPEG_LOG_LEVEL"] = "quiet"
 os.environ["AV_LOG_FORCE_NOCOLOR"] = "1"
 
-try:
-    if sys.platform == "win32":
-        _nul_fd = os.open("NUL", os.O_WRONLY)
-        os.dup2(_nul_fd, 2)
-        os.close(_nul_fd)
-except Exception:
-    pass
-
 import yt_dlp
 import asyncio
 import time
@@ -346,6 +338,21 @@ class PlayerService:
             track.stream_url = cached_file
             return cached_file
 
+        # Check cached streaming URL with 2-hour (7200s) TTL validation
+        now = time.time()
+        if track.url in self.stream_cache and not force_refresh:
+            cached_entry = self.stream_cache[track.url]
+            if isinstance(cached_entry, tuple):
+                cached_url, ts = cached_entry
+                if (now - ts) < 7200: # Valid for 2 hours
+                    track.stream_url = cached_url
+                    return cached_url
+                else:
+                    self.stream_cache.pop(track.url, None)
+            elif isinstance(cached_entry, str):
+                track.stream_url = cached_entry
+                return cached_entry
+
         loop = asyncio.get_running_loop()
         
         # 2. Buffer track audio file directly to SSD (~1.4s fast download)
@@ -360,7 +367,7 @@ class PlayerService:
 
         stream_url = await loop.run_in_executor(self.executor, self._run_resolve, track.url)
         if stream_url:
-            self.stream_cache[track.url] = stream_url
+            self.stream_cache[track.url] = (stream_url, now)
             track.stream_url = stream_url
         return stream_url
 
@@ -371,10 +378,11 @@ class PlayerService:
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'format': 'bestaudio[ext=m4a]/bestaudio',
+            'format': 'bestaudio/best',
             'outtmpl': out_file,
             'nocheckcertificate': True,
             'socket_timeout': 10,
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -400,7 +408,7 @@ class PlayerService:
 
     def _cleanup_old_cache(self):
         try:
-            files = [os.path.join(self.temp_cache_dir, f) for f in os.listdir(self.temp_cache_dir) if f.endswith('.m4a')]
+            files = [os.path.join(self.temp_cache_dir, f) for f in os.listdir(self.temp_cache_dir) if f.endswith(('.m4a', '.webm', '.opus'))]
             files.sort(key=os.path.getmtime)
             while len(files) > 30:
                 f_del = files.pop(0)
@@ -415,7 +423,7 @@ class PlayerService:
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'format': 'bestaudio[ext=m4a]/bestaudio/best',
+            'format': 'bestaudio/best',
             'skip_download': True,
             'nocheckcertificate': True,
             'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
