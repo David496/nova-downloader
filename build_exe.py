@@ -43,6 +43,9 @@ def build():
         "--hidden-import=PySide6.QtMultimedia",
         "--hidden-import=mutagen",
         "--hidden-import=yt_dlp",
+        "--hidden-import=yt_dlp_ejs",
+        "--hidden-import=darkdetect",
+        "--hidden-import=PIL",
         os.path.join(project_root, "main_flet.py")
     ]
 

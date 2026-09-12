@@ -62,22 +62,24 @@ No requiere tener Python instalado ni ejecutar comandos.
 
 ## Características Principales
 
-### 1. Reproductor en Línea (Online Streaming)
-* **Reproducción Directa sin Descarga**: Motor de audio desarrollado sobre **PySide6 (QtMultimedia)** con arquitectura de pre-buffering local que garantiza transmisiones 100% fluidas, inmunes a caídas de Internet, expiración de tokens o micro-cortes.
-* **📌 Guardado de Playlists de YouTube**: Sistema de fijado con extracción automática del nombre oficial de la lista en YouTube. Incluye accesos rápidos en barra y una **Ventana Modal espaciosa con Buscador Interno** para gestionar colecciones de cualquier tamaño.
-* **Sincronización Dinámica de Audio**: Detección automática del dispositivo predeterminado de Windows (pantalla HDMI, parlantes o audífonos) con conmutación en tiempo real.
-* **Descarga Directa desde la Cola**: Opción para guardar cualquier pista en calidad MP3 a 320 kbps con carátula e ID3v2 incrustados durante la reproducción.
+### 1. Reproductor en Línea & Mini-Player Global
+* **Mini-Reproductor Persistente (Bottom Dock)**: Barra flotante estilo *Spotify Desktop* en la parte inferior de la ventana, visible y sincronizada en todas las pestañas (Inicio, Descargas, Biblioteca, Ajustes) con carátula, controles (Prev/Play/Next), timeline interactivo y volumen.
+* **Ambient Glow Effect & Ecualizador Dinámico**: Halo de resplandor ambiental púrpura difuso detrás de la carátula y ecualizador animado en tiempo real dentro del badge de estado.
+* **Reproducción Directa sin Descarga**: Motor de audio nativo basado en **PySide6 (QtMultimedia)** con pre-buffering y reconexión automática ante enlaces expirados.
+* **📌 Guardado de Playlists de YouTube**: Fijado de listas de reproducción con extracción de metadatos, accesos directos y una **Ventana Modal con Buscador Integrado**.
+* **Sincronización Dinámica de Audio**: Detección automática del dispositivo de salida predeterminado de Windows (HDMI, altavoces, auriculares Bluetooth) sin interrumpir la reproducción.
 
-### 2. Gestor de Descargas Multimedia
-* **Incrustación de Metadatos y Carátulas (Mutagen & FFmpeg)**: Asignación automática de etiquetas ID3v2/MP4 (título, artista) e integración de portadas de álbum en formato JPG para archivos MP3 y M4A sin dejar imágenes temporales en disco.
-* **Soporte de Subtítulos para Videos**: Incrustación de subtítulos multilingües dentro del contenedor MP4 (`FFmpegEmbedSubtitle`) o guardado independiente en formato `.srt` (exclusivo para descargas de video).
-* **Gestión de Listas de Reproducción**: Selección individual o masiva de videos dentro de listas de reproducción públicas con barra de progreso en tiempo real y numeración limpia de archivos.
-* **Descargas Asíncronas en Segundo Plano**: Control del flujo de descargas sin bloqueo del hilo principal de la interfaz de usuario.
+### 2. Gestor de Descargas Multimedia Inteligente
+* **Banner Inteligente del Portapapeles**: Detección automática de enlaces compatibles en el portapapeles con opción de *Pegar y Analizar* en 1 solo clic.
+* **Pill Badges Modernas**: Selectores de calidad y formato con etiquetas tipo píldora (`[ 4K UHD ]`, `[ 1080p FHD ]`, `[ MP3 320 KBPS ]`, `[ LOSSLESS ]`) y microinteracciones de elevación al pasar el cursor.
+* **Incrustación de Metadatos y Carátulas**: Asignación automática de tags ID3v2/MP4 (título, artista, año) e incrustación de carátulas JPG en alta resolución sin dejar archivos temporales huérfanos.
+* **Soporte de Subtítulos y Playlists**: Descarga masiva o individual de elementos de listas de reproducción públicas con barra de progreso en vivo e incrustación de subtítulos (`.srt` / `FFmpegEmbedSubtitle`).
 
-### 3. Interfaz y Experiencia de Usuario
-* **🧹 Limpieza de Caché de Reproducción**: Opción integrada en el panel de Ajustes para vaciar el espacio en disco utilizado por la caché temporal con un solo clic.
-* **Modo Oscuro Permanente**: Interfaz visual estilizada en tema oscuro con capsules de selección en tono violeta y micro-animaciones táctiles en botones y listas.
-* **Biblioteca e Historial Integrado**: Registro local persistente mediante SQLite con validación en tiempo real del archivo en disco (`os.path.exists`) y filtrado instantáneo en memoria RAM.
+### 3. Biblioteca Local con Reproducción Nativa
+* **Alternador de Vista (Lista vs Cuadrícula / Carátulas)**: Conmutador en cabecera para alternar entre vista de lista compacta y vista en cuadrícula con tarjetas de carátula grande (190x240px).
+* **Reproducción Nativa en 1 Clic**: Escucha tus canciones descargadas directamente en el reproductor interno de la aplicación sin recurrir a programas externos.
+* **Base de Datos SQLite Robusta (Cero Duplicados)**: Motor de persistencia en modo WAL con deduplicación estricta por título y ruta, prevención de registros fantasma y cálculo exacto del tamaño del archivo.
+* **🧹 Limpieza de Caché**: Herramienta en el panel de Ajustes para vaciar archivos temporales de streaming con un solo clic.
 
 ---
 

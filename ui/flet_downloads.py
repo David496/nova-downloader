@@ -1,5 +1,6 @@
 import flet as ft
 import database.db as db
+import os
 import re
 import asyncio
 from core.config import config
@@ -203,14 +204,32 @@ class DownloadsView(ft.Column):
                 if "Bajando elemento" in st or "Procesando" in st or "Descargando" in st:
                     await item.set_finished_async()
 
-        db.add_download(
-            title=info.get('title') or task.title,
-            url=task.url,
-            file_type=task.file_type,
-            quality=task.options.get('format', 'N/A'),
-            size="N/A",
-            path=info.get('path', '')
-        )
+        file_path = info.get('path', '')
+        size_str = "N/A"
+        if file_path and os.path.exists(file_path):
+            try:
+                b_size = os.path.getsize(file_path)
+                if b_size >= 1024 * 1024 * 1024:
+                    size_str = f"{b_size / (1024 * 1024 * 1024):.1f} GB"
+                elif b_size >= 1024 * 1024:
+                    size_str = f"{b_size / (1024 * 1024):.1f} MB"
+                elif b_size >= 1024:
+                    size_str = f"{b_size / 1024:.0f} KB"
+                else:
+                    size_str = f"{b_size} B"
+            except Exception:
+                size_str = "N/A"
+
+        is_playlist_parent = bool(task.options.get('yesplaylist')) and (not file_path or os.path.isdir(file_path))
+        if not is_playlist_parent and file_path and os.path.isfile(file_path):
+            db.add_download(
+                title=info.get('title') or task.title,
+                url=task.url,
+                file_type=task.file_type,
+                quality=task.options.get('format', 'N/A'),
+                size=size_str,
+                path=file_path
+            )
         AppEvents.notify()
 
     def on_error(self, task, err):

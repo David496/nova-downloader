@@ -2,6 +2,9 @@
 # ENTORNO VIRTUAL
 # =========================
 venv/
+.venv/
+env/
+ENV/
 
 # =========================
 # CACHE PYTHON
@@ -15,12 +18,17 @@ __pycache__/
 # =========================
 *.db
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
 
 # =========================
-# ARCHIVOS DE CONFIG LOCAL
+# ARCHIVOS DE CONFIG Y COOKIES
 # =========================
 .env
 config.local.json
+cookies.txt
+*.cookies
 
 # =========================
 # LOGS
@@ -28,20 +36,33 @@ config.local.json
 *.log
 
 # =========================
-# ARCHIVOS TEMPORALES
+# ARCHIVOS TEMPORALES Y PRUEBAS
 # =========================
 *.tmp
 *.temp
+scratch/
+*.part
+*.ytdl
 
 # =========================
-# VS CODE
+# DESCARGAS LOCALES ACCIDENTALES
+# =========================
+*.mp3
+*.mp4
+*.m4a
+*.webm
+*.mkv
+*.wav
+*.flac
+*.opus
+
+# =========================
+# EDITORES E IDES
 # =========================
 .vscode/
-
-# =========================
-# PYCHARM
-# =========================
 .idea/
+*.swp
+*.swo
 
 # =========================
 # SISTEMA OPERATIVO
@@ -51,7 +72,7 @@ Thumbs.db
 desktop.ini
 
 # =========================
-# BUILD / DIST
+# BUILD / DIST / PYINSTALLER
 # =========================
 build/
 dist/
@@ -62,4 +83,4 @@ dist/
 # =========================
 .pytest_cache/
 .coverage
-htmlcov/
+htmlcov/

@@ -2,56 +2,95 @@ import flet as ft
 from services.downloader import InfoExtractor
 from core.config import config
 import os
+import asyncio
 
 class FormatCard(ft.Container):
-    def __init__(self, f_type, label, desc, options, on_click):
+    def __init__(self, f_type, label, desc, options, on_click, pill_text=None, pill_color=None):
         super().__init__()
         self.f_type = f_type
         self.label = label
         self.options = options
         self.on_click_callback = on_click
+        self.is_selected = False
         
-        icon = ft.Icons.ONDEMAND_VIDEO if f_type == "video" else ft.Icons.AUDIOTRACK
+        icon = ft.Icons.ONDEMAND_VIDEO_ROUNDED if f_type == "video" else ft.Icons.AUDIOTRACK_ROUNDED
         
+        trailing_controls = []
+        if pill_text:
+            p_color = pill_color or (ft.Colors.PURPLE_300 if f_type == "video" else ft.Colors.CYAN_300)
+            pill = ft.Container(
+                content=ft.Text(pill_text, size=9, weight=ft.FontWeight.BOLD, color=p_color),
+                padding=ft.Padding(6, 2, 6, 2),
+                bgcolor=ft.Colors.with_opacity(0.12, p_color),
+                border_radius=6,
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.25, p_color))
+            )
+            trailing_controls.append(pill)
+
+        self.check_icon = ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=ft.Colors.PURPLE_300, size=16, visible=False)
+        trailing_controls.append(self.check_icon)
+
         self.content = ft.Row(
             [
-                ft.Icon(icon, color=ft.Colors.PURPLE_400, size=18),
+                ft.Container(
+                    content=ft.Icon(icon, color=ft.Colors.PURPLE_300, size=18),
+                    padding=6,
+                    bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500),
+                    border_radius=8
+                ),
                 ft.Column(
                     [
-                        ft.Text(label, weight=ft.FontWeight.BOLD, size=12),
+                        ft.Text(label, weight=ft.FontWeight.BOLD, size=12, color=ft.Colors.WHITE),
                         ft.Text(desc, size=10, color=ft.Colors.GREY_400),
                     ],
-                    spacing=0,
+                    spacing=1,
                     expand=True,
                 ),
-                ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.PURPLE_400, size=16, visible=False)
+                *trailing_controls
             ],
             alignment=ft.MainAxisAlignment.START,
-            spacing=8
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=10
         )
-        self.padding = ft.Padding(10, 6, 10, 6)
-        self.border_radius = 8
+        self.padding = ft.Padding(12, 8, 12, 8)
+        self.border_radius = 10
         self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
         self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
         self.on_click = self._handle_click
-        self.animate = ft.Animation(150, ft.AnimationCurve.EASE_OUT)
+        self.animate = ft.Animation(160, ft.AnimationCurve.EASE_OUT)
+        self.on_hover = self._handle_hover
+
+    def _handle_hover(self, e):
+        if self.is_selected:
+            return
+        if e.data == "true":
+            self.bgcolor = ft.Colors.with_opacity(0.07, ft.Colors.PURPLE_500)
+            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.35, ft.Colors.PURPLE_400))
+        else:
+            self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
+            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
+        try:
+            self.update()
+        except Exception:
+            pass
 
     async def _handle_click(self, e):
         await self.on_click_callback(self)
 
     async def set_selected(self, selected):
+        self.is_selected = selected
         if selected:
-            self.bgcolor = ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_400)
+            self.bgcolor = ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_600)
             self.border = ft.Border.all(1.5, ft.Colors.PURPLE_400)
-            self.content.controls[2].visible = True
+            self.check_icon.visible = True
         else:
             self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
             self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
-            self.content.controls[2].visible = False
+            self.check_icon.visible = False
         
         try:
             self.update()
-        except:
+        except Exception:
             pass
 
 class HomeView(ft.Column):
@@ -125,6 +164,43 @@ class HomeView(ft.Column):
             height=44,
             alignment=ft.Alignment.CENTER
         )
+
+        # Smart Clipboard Banner
+        self.clipboard_detected_url = ""
+        self.clipboard_url_text = ft.Text("", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=True)
+        self.clipboard_banner = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.PASTE_ROUNDED, color=ft.Colors.PURPLE_300, size=16),
+                ft.Text("Enlace detectado:" if lang == "es" else "Detected link:", size=11, color=ft.Colors.PURPLE_200, weight=ft.FontWeight.W_500),
+                self.clipboard_url_text,
+                ft.ElevatedButton(
+                    "Pegar y Analizar" if lang == "es" else "Paste & Analyze",
+                    height=28,
+                    style=ft.ButtonStyle(
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                        bgcolor=ft.Colors.PURPLE_600,
+                        color=ft.Colors.WHITE,
+                        padding=ft.Padding(10, 0, 10, 0)
+                    ),
+                    on_click=self.on_clipboard_banner_apply
+                ),
+                ft.IconButton(
+                    icon=ft.Icons.CLOSE_ROUNDED,
+                    icon_size=15,
+                    icon_color=ft.Colors.GREY_400,
+                    tooltip="Descartar" if lang == "es" else "Dismiss",
+                    on_click=self.on_clipboard_banner_dismiss
+                )
+            ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_600),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)),
+            border_radius=12,
+            padding=ft.Padding(12, 6, 8, 6),
+            visible=False,
+            animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT)
+        )
+
+        self.controls.append(self.clipboard_banner)
 
         self.controls.append(
             ft.Row([self.url_input, self.paste_btn, self.analyze_btn], spacing=8, alignment=ft.MainAxisAlignment.CENTER)
@@ -235,6 +311,42 @@ class HomeView(ft.Column):
 
         self.controls.append(self.results_container)
 
+    def did_mount(self):
+        asyncio.create_task(self.check_clipboard())
+
+    async def check_clipboard(self):
+        try:
+            val = await self.get_clipboard_text()
+            if val and (val.startswith("http://") or val.startswith("https://")) and any(s in val.lower() for s in ["youtube.com", "youtu.be", "soundcloud", "vimeo", "tiktok", "instagram", "facebook"]):
+                if val != self.url_input.value.strip():
+                    self.clipboard_detected_url = val
+                    self.clipboard_url_text.value = val
+                    self.clipboard_banner.visible = True
+                    try:
+                        self.clipboard_banner.update()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+    async def on_clipboard_banner_apply(self, e):
+        if self.clipboard_detected_url:
+            self.url_input.value = self.clipboard_detected_url
+            self.clipboard_banner.visible = False
+            try:
+                self.clipboard_banner.update()
+                self.url_input.update()
+            except Exception:
+                pass
+            await self.on_analyze(None)
+
+    def on_clipboard_banner_dismiss(self, e):
+        self.clipboard_banner.visible = False
+        try:
+            self.clipboard_banner.update()
+        except Exception:
+            pass
+
     async def on_playlist_toggle(self, e):
         self.playlist_items_container.visible = not self.playlist_checkbox.value
         try:
@@ -242,13 +354,7 @@ class HomeView(ft.Column):
         except:
             pass
 
-    def get_clipboard_text(self):
-        if hasattr(self.page, "get_clipboard"):
-            try:
-                res = self.page.get_clipboard()
-                if res: return res.strip()
-            except:
-                pass
+    def _read_tkinter_clipboard(self):
         try:
             import tkinter as tk
             root = tk.Tk()
@@ -260,9 +366,18 @@ class HomeView(ft.Column):
         except Exception:
             return ""
 
+    async def get_clipboard_text(self):
+        if hasattr(self.page, "get_clipboard"):
+            try:
+                res = self.page.get_clipboard()
+                if res: return res.strip()
+            except:
+                pass
+        return await asyncio.to_thread(self._read_tkinter_clipboard)
+
     async def on_paste(self, e):
         try:
-            val = self.get_clipboard_text()
+            val = await self.get_clipboard_text()
             if val:
                 self.url_input.value = val
                 try:
@@ -371,10 +486,10 @@ class HomeView(ft.Column):
         config.get("language", "es")
 
         video_qualities = [
-            ("4K Ultra HD", "Calidad máxima (2160p)", {'format': 'bestvideo[height<=2160]+bestaudio/best[height<=2160]/best', 'merge_output_format': 'mp4'}),
-            ("1080p Full HD", "Alta definición (1080p)", {'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best', 'merge_output_format': 'mp4'}),
-            ("720p HD", "Calidad estándar (720p)", {'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best', 'merge_output_format': 'mp4'}),
-            ("480p / 360p", "Ahorro de datos", {'format': 'bestvideo[height<=480]+bestaudio/best[height<=480]/best', 'merge_output_format': 'mp4'}),
+            ("4K Ultra HD", "Calidad máxima (2160p)", {'format': 'bestvideo[height<=2160]+bestaudio/best[height<=2160]/best', 'merge_output_format': 'mp4'}, "4K UHD", ft.Colors.AMBER_400),
+            ("1080p Full HD", "Alta definición (1080p)", {'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best', 'merge_output_format': 'mp4'}, "1080p FHD", ft.Colors.PURPLE_300),
+            ("720p HD", "Calidad estándar (720p)", {'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best', 'merge_output_format': 'mp4'}, "720p HD", ft.Colors.BLUE_300),
+            ("480p / 360p", "Ahorro de datos", {'format': 'bestvideo[height<=480]+bestaudio/best[height<=480]/best', 'merge_output_format': 'mp4'}, "SD", ft.Colors.GREY_400),
         ]
         
         embed_meta = config.get("embed_metadata", True)
@@ -395,29 +510,29 @@ class HomeView(ft.Column):
                 'format': 'bestaudio/best',
                 'writethumbnail': embed_meta,
                 'postprocessors': mp3_high_pps
-            }),
+            }, "320 KBPS", ft.Colors.GREEN_400),
             ("MP3 Estándar", "192kbps - Recomendado", {
                 'format': 'bestaudio/best',
                 'writethumbnail': embed_meta,
                 'postprocessors': mp3_std_pps
-            }),
+            }, "192 KBPS", ft.Colors.CYAN_300),
             ("M4A / AAC", "Audio ligero", {
                 'format': 'bestaudio/best',
                 'writethumbnail': embed_meta,
                 'postprocessors': m4a_pps
-            }),
+            }, "M4A", ft.Colors.PURPLE_300),
             ("Formato WAV", "Sin compresión", {
                 'format': 'bestaudio/best',
                 'postprocessors': wav_pps
-            }),
+            }, "LOSSLESS", ft.Colors.AMBER_300),
         ]
 
-        for label, desc, opts in video_qualities:
-            card = FormatCard("video", label, desc, opts, self.on_card_selected)
+        for label, desc, opts, pill, pcol in video_qualities:
+            card = FormatCard("video", label, desc, opts, self.on_card_selected, pill, pcol)
             self.video_list.controls.append(card)
             
-        for label, desc, opts in audio_qualities:
-            card = FormatCard("audio", label, desc, opts, self.on_card_selected)
+        for label, desc, opts, pill, pcol in audio_qualities:
+            card = FormatCard("audio", label, desc, opts, self.on_card_selected, pill, pcol)
             self.audio_list.controls.append(card)
         
         try:

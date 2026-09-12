@@ -98,8 +98,6 @@ class QtAudioPlayer:
                         elif cmd == 'resume':
                             self.player.play()
                         elif cmd == 'stop':
-                            if self.stall_timer and self.stall_timer.isActive():
-                                self.stall_timer.stop()
                             self.player.stop()
                         elif cmd == 'seek':
                             self.player.setPosition(int(args[0] * 1000))
@@ -113,11 +111,6 @@ class QtAudioPlayer:
             self.timer.timeout.connect(process_q)
             self.timer.start()
 
-            self.stall_timer = QTimer()
-            self.stall_timer.setSingleShot(True)
-            self.stall_timer.setInterval(2000) # 2-second stall watchdog for YouTube CDN drops
-            self.stall_timer.timeout.connect(self._on_stall_timeout)
-
             if hasattr(self.app, 'exec'):
                 self.app.exec()
             else:
@@ -130,21 +123,6 @@ class QtAudioPlayer:
             if self.player is not None:
                 break
             time.sleep(0.05)
-
-    def _on_stall_timeout(self):
-        """Fires if QMediaPlayer stays stuck in StalledMedia for > 2s."""
-        if self.is_playing and self.player and self.player.mediaStatus() == QMediaPlayer.MediaStatus.StalledMedia:
-            if self.on_error:
-                if self.loop:
-                    try:
-                        self.loop.call_soon_threadsafe(self.on_error)
-                    except Exception:
-                        pass
-                else:
-                    try:
-                        self.on_error()
-                    except Exception:
-                        pass
 
     def _handle_position(self, pos_ms):
         self.position_sec = pos_ms / 1000.0
@@ -172,12 +150,9 @@ class QtAudioPlayer:
 
     def _handle_status(self, status):
         if status == QMediaPlayer.MediaStatus.LoadedMedia or status == QMediaPlayer.MediaStatus.BufferedMedia:
-            if self.stall_timer and self.stall_timer.isActive():
-                self.stall_timer.stop()
+            pass
 
         elif status == QMediaPlayer.MediaStatus.EndOfMedia:
-            if self.stall_timer and self.stall_timer.isActive():
-                self.stall_timer.stop()
             self.is_playing = False
             if self.on_finished:
                 if self.loop:
@@ -192,8 +167,6 @@ class QtAudioPlayer:
                         pass
 
         elif status == QMediaPlayer.MediaStatus.InvalidMedia:
-            if self.stall_timer and self.stall_timer.isActive():
-                self.stall_timer.stop()
             self.is_playing = False
             if self.on_error:
                 if self.loop:

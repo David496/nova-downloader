@@ -6,10 +6,49 @@ import asyncio
 import time
 import re
 from core.config import config
-from services.player import PlayerService, QtAudioPlayer
+from services.player import PlayerService, QtAudioPlayer, MusicTrack
 from services.downloader import DownloadTask
 from ui.flet_styles import AppEvents
 import database.db as db
+
+class EqualizerWidget(ft.Row):
+    def __init__(self, color=ft.Colors.PURPLE_300, bar_count=4):
+        super().__init__()
+        self.spacing = 3
+        self.alignment = ft.MainAxisAlignment.CENTER
+        self.vertical_alignment = ft.CrossAxisAlignment.END
+        self.height = 14
+        self.color = color
+        self.bar_count = bar_count
+        self.visible = False
+        
+        self.bars = []
+        durations = [220, 180, 260, 200, 240]
+        for i in range(bar_count):
+            dur = durations[i % len(durations)]
+            bar = ft.Container(
+                width=3, 
+                height=4, 
+                border_radius=1.5, 
+                bgcolor=color, 
+                animate=ft.Animation(dur, ft.AnimationCurve.EASE_IN_OUT)
+            )
+            self.bars.append(bar)
+        self.controls = self.bars
+
+    def set_playing(self, is_playing):
+        self.visible = is_playing
+        if is_playing:
+            heights = [6, 14, 8, 12, 10, 14]
+            for bar in self.bars:
+                bar.height = random.choice(heights)
+        else:
+            for bar in self.bars:
+                bar.height = 3
+        try:
+            self.update()
+        except Exception:
+            pass
 
 class PlayerView(ft.Column):
     def __init__(self, download_manager):
@@ -46,8 +85,58 @@ class PlayerView(ft.Column):
             on_error=self._on_audio_error
         )
         
+        self.on_state_change_listeners = []
+        self.on_position_listeners = []
+        
         self._build_ui()
         AppEvents.subscribe(self.on_global_refresh)
+
+    def add_state_listener(self, fn):
+        if fn not in self.on_state_change_listeners:
+            self.on_state_change_listeners.append(fn)
+
+    def add_position_listener(self, fn):
+        if fn not in self.on_position_listeners:
+            self.on_position_listeners.append(fn)
+
+    def _notify_state_change(self):
+        for cb in self.on_state_change_listeners:
+            try:
+                cb()
+            except Exception:
+                pass
+
+    def play_local_file(self, filepath, title=None, artist="Biblioteca Local"):
+        if not filepath or not os.path.exists(filepath):
+            return
+        base = os.path.splitext(os.path.basename(filepath))[0]
+        track_title = title or base
+        track = MusicTrack(
+            title=track_title,
+            artist=artist,
+            duration=0,
+            thumbnail=None,
+            url=filepath,
+            track_id=str(uuid.uuid4()),
+            stream_url=filepath
+        )
+        self.current_track = track
+        self.is_loading_track = False
+        
+        existing_idx = -1
+        for idx, t in enumerate(self.queue):
+            if getattr(t, 'url', None) == filepath:
+                existing_idx = idx
+                break
+        if existing_idx >= 0:
+            self.current_index = existing_idx
+        else:
+            self.queue.insert(0, track)
+            self.current_index = 0
+            
+        self.audio_player.play_url(filepath)
+        self._update_hero_ui()
+        self._update_queue_ui()
 
     def did_mount(self):
         try:
@@ -59,6 +148,13 @@ class PlayerView(ft.Column):
         self._update_queue_ui()
 
     def on_global_refresh(self):
+        try:
+            downloaded_urls, downloaded_titles, _ = self._get_downloaded_sets()
+            self.active_download_urls.difference_update(downloaded_urls)
+            self.active_download_titles.difference_update(downloaded_titles)
+        except Exception:
+            pass
+
         if self.loop and self.loop.is_running():
             try:
                 self.loop.call_soon_threadsafe(self._refresh_queue_realtime)
@@ -131,14 +227,17 @@ class PlayerView(ft.Column):
             if self.is_loading_track:
                 self.badge_lbl.value = "CARGANDO..."
                 self.status_dot.bgcolor = ft.Colors.AMBER_400
+                self.equalizer.set_playing(False)
             elif self.audio_player.is_playing:
                 self.badge_lbl.value = "EN REPRODUCCIÓN" if lang == "es" else "PLAYING"
                 self.status_dot.bgcolor = ft.Colors.GREEN_400
                 self.play_btn.content.icon = ft.Icons.PAUSE_ROUNDED
+                self.equalizer.set_playing(True)
             else:
                 self.badge_lbl.value = "EN PAUSA" if lang == "es" else "PAUSED"
                 self.status_dot.bgcolor = ft.Colors.AMBER_400
                 self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
+                self.equalizer.set_playing(False)
         else:
             self.track_title.value = "Selecciona una canción" if lang == "es" else "Select a song"
             self.track_artist.value = "Haz clic en cualquier tema de la lista" if lang == "es" else "Click on any track in the queue"
@@ -147,11 +246,14 @@ class PlayerView(ft.Column):
             self.badge_lbl.value = "ESPERANDO PISTA" if lang == "es" else "READY"
             self.status_dot.bgcolor = ft.Colors.PURPLE_400
             self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
+            self.equalizer.set_playing(False)
             
         try:
             self.hero_card.update()
         except Exception:
             self._safe_update()
+            
+        self._notify_state_change()
 
     def _build_ui(self):
         self.controls.clear()
@@ -271,19 +373,40 @@ class PlayerView(ft.Column):
             alignment=ft.Alignment.CENTER
         )
 
-        # Status Pill Badge
+        # Status Pill Badge with Live Equalizer
         self.status_dot = ft.Container(width=7, height=7, border_radius=3.5, bgcolor=ft.Colors.PURPLE_400)
         self.badge_lbl = ft.Text("ESPERANDO PISTA" if lang == "es" else "READY", size=9, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_200)
+        self.equalizer = EqualizerWidget(color=ft.Colors.PURPLE_300, bar_count=4)
         
         self.badge_icon = ft.Container(
             content=ft.Row([
                 self.status_dot,
+                self.equalizer,
                 self.badge_lbl
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=6),
             padding=ft.Padding(10, 4, 10, 4),
             bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_500),
             border_radius=16,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400))
+        )
+
+        # Ambient Glow Album Art Container
+        self.thumbnail_container = ft.Container(
+            content=ft.Stack([
+                self.placeholder_icon,
+                self.thumbnail_img
+            ]),
+            width=175,
+            height=175,
+            border_radius=18,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=28,
+                color=ft.Colors.with_opacity(0.4, ft.Colors.PURPLE_600),
+                offset=ft.Offset(0, 5)
+            ),
+            animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+            alignment=ft.Alignment.CENTER
         )
 
         # HQ 320 KBPS Audio Quality Badge
@@ -424,7 +547,7 @@ class PlayerView(ft.Column):
             content=ft.Column([
                 badge_header_row,
                 
-                ft.Row([self.thumbnail_img, self.placeholder_icon], alignment=ft.MainAxisAlignment.CENTER),
+                ft.Row([self.thumbnail_container], alignment=ft.MainAxisAlignment.CENTER),
                 
                 # Title & Artist Column
                 ft.Column([
@@ -497,6 +620,21 @@ class PlayerView(ft.Column):
             main_layout
         ])
         
+        if hasattr(self, 'audio_player') and self.audio_player and self.audio_player.duration_sec > 0:
+            pos = self.audio_player.position_sec
+            dur = self.audio_player.duration_sec
+            self.progress_slider.value = min(100.0, max(0.0, (pos / dur) * 100.0))
+            self.current_time_lbl.value = self._format_seconds(pos)
+            self.total_time_lbl.value = self._format_seconds(dur)
+
+        if hasattr(self, 'is_shuffle') and self.is_shuffle:
+            self.shuffle_container.bgcolor = ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_500)
+            self.shuffle_container.content.icon_color = ft.Colors.PURPLE_300
+        if hasattr(self, 'is_repeat') and self.is_repeat:
+            self.repeat_container.bgcolor = ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_500)
+            self.repeat_container.content.icon_color = ft.Colors.PURPLE_300
+
+        self._update_hero_ui()
         self._update_queue_ui()
         self._refresh_saved_playlists_ui()
 
@@ -791,7 +929,7 @@ class PlayerView(ft.Column):
         self._update_hero_ui()
         self._update_queue_ui()
 
-    def get_clipboard_text(self):
+    def _read_tkinter_clipboard(self):
         try:
             import tkinter as tk
             root = tk.Tk()
@@ -803,8 +941,17 @@ class PlayerView(ft.Column):
         except Exception:
             return ""
 
+    async def get_clipboard_text(self):
+        if hasattr(self.page, "get_clipboard"):
+            try:
+                res = self.page.get_clipboard()
+                if res: return res.strip()
+            except:
+                pass
+        return await asyncio.to_thread(self._read_tkinter_clipboard)
+
     async def on_paste(self, e):
-        val = self.get_clipboard_text()
+        val = await self.get_clipboard_text()
         if val:
             self.search_input.value = val
             self._safe_update()
@@ -958,8 +1105,27 @@ class PlayerView(ft.Column):
                 border=card_border,
                 ink=True,
                 ink_color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_500),
+                animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
                 on_click=lambda _, i=idx: asyncio.create_task(self.play_track_at(i))
             )
+
+            def _make_hover(cnt, active):
+                def _h(e):
+                    if active:
+                        return
+                    if e.data == "true":
+                        cnt.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_400)
+                        cnt.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400))
+                    else:
+                        cnt.bgcolor = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
+                        cnt.border = ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
+                    try:
+                        cnt.update()
+                    except Exception:
+                        pass
+                return _h
+
+            item.on_hover = _make_hover(item, is_active)
             self.queue_list.controls.append(item)
 
         try:
@@ -968,8 +1134,11 @@ class PlayerView(ft.Column):
             self._safe_update()
 
     async def play_track_at(self, index, force_refresh=False):
-        if index < 0 or index >= len(self.queue) or self.is_loading_track:
+        if index < 0 or index >= len(self.queue):
             return
+
+        req_id = getattr(self, '_play_request_id', 0) + 1
+        self._play_request_id = req_id
 
         self.is_loading_track = True
         self.current_index = index
@@ -981,9 +1150,16 @@ class PlayerView(ft.Column):
         # Resolve stream URL
         stream_url = await self.player_service.resolve_stream_url(self.current_track, force_refresh=force_refresh)
         
+        # If user selected another track while resolving, ignore previous request
+        if self._play_request_id != req_id:
+            return
+
         # If cached link failed, retry once with fresh extraction!
         if not stream_url and not force_refresh:
             stream_url = await self.player_service.resolve_stream_url(self.current_track, force_refresh=True)
+
+        if self._play_request_id != req_id:
+            return
 
         if stream_url:
             self.audio_player.play_url(stream_url)
@@ -1000,8 +1176,9 @@ class PlayerView(ft.Column):
                 self.player_service.prebuffer_track(self.queue[next_idx])
         else:
             await asyncio.sleep(1.0)
-            self.is_loading_track = False
-            self.play_next()
+            if self._play_request_id == req_id:
+                self.is_loading_track = False
+                self.play_next()
             return
 
     def toggle_play_pause(self, e=None):
@@ -1027,6 +1204,17 @@ class PlayerView(ft.Column):
     def play_prev(self):
         if not self.queue:
             return
+        if hasattr(self, 'audio_player') and self.audio_player and self.audio_player.position_sec > 3.0:
+            self.audio_player.seek(0)
+            self.current_time_lbl.value = "00:00"
+            self.progress_slider.value = 0
+            try:
+                self.current_time_lbl.update()
+                self.progress_slider.update()
+            except Exception:
+                pass
+            return
+
         prev_idx = (self.current_index - 1) % len(self.queue)
         asyncio.create_task(self.play_track_at(prev_idx))
 
@@ -1129,8 +1317,16 @@ class PlayerView(ft.Column):
             self.progress_slider.update()
             self.current_time_lbl.update()
             self.total_time_lbl.update()
+            if self.audio_player.is_playing and self.equalizer.visible:
+                self.equalizer.set_playing(True)
         except Exception:
             pass
+
+        for cb in self.on_position_listeners:
+            try:
+                cb(pos_sec, dur_sec)
+            except Exception:
+                pass
 
     def _on_audio_finished(self):
         if self.is_repeat and self.current_index >= 0:
@@ -1141,12 +1337,14 @@ class PlayerView(ft.Column):
 
     def _on_audio_error(self):
         """Called automatically if QMediaPlayer encounters an expired link or network error on remote streams."""
+        self.is_loading_track = False
         if self.current_track:
             stream_url = getattr(self.current_track, 'stream_url', '') or ''
-            # Only trigger auto-recovery for remote HTTPS streams, NOT for local SSD files!
             if stream_url.startswith("http://") or stream_url.startswith("https://"):
                 saved_pos = getattr(self.audio_player, 'position_sec', 0)
                 asyncio.create_task(self._auto_recover_playback(saved_pos))
+            else:
+                self.play_next()
 
     async def _auto_recover_playback(self, resume_sec=0):
         if self.current_track and self.current_index >= 0:
@@ -1159,8 +1357,15 @@ class PlayerView(ft.Column):
 
     async def _poll_download_completion(self, clean_title, t_url):
         output_dir = config.get("download_dir", os.path.expanduser("~/Downloads"))
-        for _ in range(120): # Poll for up to 60 seconds (every 500ms)
-            await asyncio.sleep(0.5)
+        for _ in range(40): # Check for up to 40 seconds
+            await asyncio.sleep(1.0)
+            downloaded_urls, downloaded_titles, _ = self._get_downloaded_sets()
+            if t_url in downloaded_urls or clean_title.lower() in downloaded_titles:
+                self.active_download_urls.discard(t_url)
+                self.active_download_titles.discard(clean_title.lower())
+                self._update_hero_ui()
+                self._update_queue_ui()
+                return
             for ext in ['.mp3', '.m4a', '.webm', '.opus', '.wav']:
                 if os.path.exists(os.path.join(output_dir, f"{clean_title}{ext}")):
                     self.active_download_urls.discard(t_url)
@@ -1168,6 +1373,10 @@ class PlayerView(ft.Column):
                     self._update_hero_ui()
                     self._update_queue_ui()
                     return
+        self.active_download_urls.discard(t_url)
+        self.active_download_titles.discard(clean_title.lower())
+        self._update_hero_ui()
+        self._update_queue_ui()
 
     async def on_download_track(self, track, already_downloaded=False):
         if already_downloaded:

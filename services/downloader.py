@@ -44,6 +44,7 @@ class DownloadManager:
         self._stop_event = threading.Event()
         self._ffmpeg_path = get_ffmpeg_location()
         self._last_progress_times = {}
+        self.executor = ThreadPoolExecutor(max_workers=3)
 
     async def start(self):
         self._loop = asyncio.get_running_loop()
@@ -57,6 +58,10 @@ class DownloadManager:
 
     def stop(self):
         self._stop_event.set()
+        try:
+            self.executor.shutdown(wait=False)
+        except Exception:
+            pass
 
     async def add_task(self, task):
         # Notify UI instantly
@@ -69,22 +74,18 @@ class DownloadManager:
         if not output_path or not os.path.exists(output_path):
             return
         clean_title = re.sub(r'[\\/*?:"<>|]', "", title).strip()
+        if not clean_title:
+            return
         
-        # Specific exact name cleanup
-        for ext in ['.png', '.webp', '.jpg', '.jpeg']:
-            for fname in [f"{clean_title}{ext}", f"{title}{ext}"]:
-                file_p = os.path.join(output_path, fname)
-                if os.path.exists(file_p):
-                    try:
-                        os.remove(file_p)
-                    except Exception:
-                        pass
-
-        # Search for any leftover PNG or WEBP matching title in directory
+        # Specific exact name cleanup to strictly avoid deleting unrelated user images
+        target_names = set()
+        for base in [clean_title, title, f"{clean_title}.temp", f"{title}.temp"]:
+            for ext in ['.png', '.webp', '.jpg', '.jpeg']:
+                target_names.add(f"{base}{ext}".lower())
+        
         try:
             for f in os.listdir(output_path):
-                f_lower = f.lower()
-                if f_lower.endswith(('.png', '.webp')) and (clean_title.lower() in f_lower):
+                if f.lower() in target_names:
                     try:
                         os.remove(os.path.join(output_path, f))
                     except Exception:
@@ -168,8 +169,7 @@ class DownloadManager:
                 ydl_opts['postprocessors'] = pps
 
         # Run yt-dlp in a thread to not block the event loop
-        with ThreadPoolExecutor() as executor:
-            await self._loop.run_in_executor(executor, self._run_ydl, task, ydl_opts)
+        await self._loop.run_in_executor(self.executor, self._run_ydl, task, ydl_opts)
 
     def _get_final_path(self, info, ydl, task):
         if info and info.get('_type') == 'playlist':
@@ -259,40 +259,35 @@ class DownloadManager:
                 else:
                     title = info.get('title') or task.title
                     self._cleanup_thumbnail_files(task.output_path, title)
-                    final_path = self._get_final_path(info, ydl, task)
-                    target_task = self.sub_tasks_map.get(title) or task
-                    self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
-                        'title': title, 
-                        'ext': info.get('ext', 'mp4'), 
-                        'path': final_path
-                    })
+                    if title not in self.finished_titles:
+                        self.finished_titles.add(title)
+                        final_path = self._get_final_path(info, ydl, task)
+                        target_task = self.sub_tasks_map.get(title) or task
+                        self._loop.call_soon_threadsafe(self.finished_cb, target_task, {
+                            'title': title, 
+                            'ext': info.get('ext', 'mp4'), 
+                            'path': final_path
+                        })
         except Exception as e:
             target_task = self.current_sub_task if self.current_sub_task else task
             self._loop.call_soon_threadsafe(self.error_cb, target_task, str(e))
 
     def _postprocessor_hook(self, d):
-        """Triggers immediately when postprocessors (FFmpeg conversion/metadata) finish for each song."""
+        """Notifies UI of conversion/metadata embedding progress without duplicate finished triggers."""
         if self._stop_event.is_set():
             raise Exception("Cancelled by user")
 
-        if d.get('status') == 'finished':
-            info = d.get('info_dict', {})
-            title = info.get('title', '')
-            
-            sub_task = self.sub_tasks_map.get(title) or (self.current_sub_task if self.current_sub_task and self.current_sub_task.title == title else None)
-            
-            # ONLY trigger finished_cb if the EmbedThumbnail / final postprocessor has completed (or if no embed pp)
-            pp_name = d.get('postprocessor', '')
-            if pp_name in ['EmbedThumbnail', 'FFmpegMetadata', 'FFmpegEmbedSubtitle', ''] or not sub_task:
-                if sub_task and title and title not in self.finished_titles:
-                    self.finished_titles.add(title)
-                    prep_path = d.get('filepath') or info.get('_filename') or info.get('filepath') or ''
-                    
-                    self._loop.call_soon_threadsafe(self.finished_cb, sub_task, {
-                        'title': title,
-                        'ext': info.get('ext', ''),
-                        'path': prep_path
-                    })
+        status = d.get('status')
+        info = d.get('info_dict', {})
+        title = info.get('title', '')
+        sub_task = self.sub_tasks_map.get(title) or (self.current_sub_task if self.current_sub_task and self.current_sub_task.title == title else None)
+        target_task = sub_task or self.current_parent_task
+        
+        if status == 'started':
+            self._loop.call_soon_threadsafe(self.progress_cb, target_task, {
+                'status': 'converting',
+                'msg': 'Procesando archivo y metadatos...'
+            })
 
     def _progress_hook(self, d):
         if self._stop_event.is_set():

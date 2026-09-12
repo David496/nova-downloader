@@ -1,8 +1,9 @@
 import sqlite3
 import os
 from datetime import datetime
+from core.config import get_storage_path
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "history.db")
+DB_PATH = get_storage_path("history.db")
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
@@ -35,6 +36,14 @@ def init_db():
             date TEXT
         )
     ''')
+    # Clean up orphan audio records that were falsely registered with .mp4 path when a corresponding .mp3 exists
+    cursor.execute('''
+        DELETE FROM downloads
+        WHERE file_type = 'audio' AND path LIKE '%.mp4'
+        AND title IN (
+            SELECT title FROM downloads WHERE file_type = 'audio' AND (path LIKE '%.mp3' OR path LIKE '%.m4a' OR path LIKE '%.opus' OR path LIKE '%.webm')
+        )
+    ''')
     # Clean up existing duplicates from database
     cursor.execute('''
         DELETE FROM downloads 
@@ -54,10 +63,19 @@ def add_download(title, url, file_type, quality, size, path):
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute('SELECT id FROM downloads WHERE title = ? AND path = ? AND file_type = ?', (title, path, file_type))
-    if cursor.fetchone():
-        conn.close()
-        return
+    if file_type == 'audio':
+        cursor.execute('''
+            SELECT id FROM downloads 
+            WHERE file_type = 'audio' AND (path = ? OR (title = ? AND (path LIKE '%.mp3' OR path LIKE '%.m4a' OR path LIKE '%.wav' OR path LIKE '%.flac')))
+        ''', (path, title))
+        if cursor.fetchone():
+            conn.close()
+            return
+    else:
+        cursor.execute('SELECT id FROM downloads WHERE title = ? AND path = ? AND file_type = ?', (title, path, file_type))
+        if cursor.fetchone():
+            conn.close()
+            return
 
     date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute('''
