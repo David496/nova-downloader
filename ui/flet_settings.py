@@ -274,7 +274,7 @@ class SettingsView(ft.Column):
         about_card = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.CODE_ROUNDED, color=pal.light, size=18),
-                ft.Text("Nova Downloader v2.1.0 • Desarrollado por David496", size=12, color=pal.light, weight=ft.FontWeight.W_600),
+                ft.Text("Nova Downloader v2.2.0 • Desarrollado por David496", size=12, color=pal.light, weight=ft.FontWeight.W_600),
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
             padding=12,
             alignment=ft.Alignment.CENTER
