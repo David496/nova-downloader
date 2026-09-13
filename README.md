@@ -19,7 +19,8 @@ No requiere tener Python instalado ni ejecutar comandos.
 1. **[Descargar Nova Downloader para Windows (.zip)](https://github.com/David496/nova-downloader/releases/latest/download/NovaDownloader-Windows-x64.zip)**.
 2. Extrae el archivo `.zip` en la carpeta que desees en tu PC (ejemplo: `C:\NovaDownloader`).
 3. Ejecuta **`NovaDownloader.exe`** para abrir la aplicación.
-   * ⚠️ **Nota Importante**: Mantén la carpeta `_internal` en la misma ubicación junto al ejecutable `.exe`. 
+   * ⚡ **100% Autónomo (FFmpeg incluido)**: El paquete `.zip` ya incluye los binarios portables de FFmpeg en la subcarpeta `ffmpeg/`, permitiendo unir video/audio en 1080p/4K y convertir a MP3 de inmediato sin instalar nada en Windows.
+   * ⚠️ **Nota Importante**: Mantén la carpeta `_internal` y `ffmpeg` en la misma ubicación junto al ejecutable `.exe`. 
    * 💡 **Tip para el Escritorio**: Haz clic derecho sobre `NovaDownloader.exe` ➔ **Enviar a** ➔ **Escritorio (crear acceso directo)** para abrir la app desde tu pantalla principal.
 
 ---
@@ -80,6 +81,17 @@ No requiere tener Python instalado ni ejecutar comandos.
 * **Reproducción Nativa en 1 Clic**: Escucha tus canciones descargadas directamente en el reproductor interno de la aplicación sin recurrir a programas externos.
 * **Base de Datos SQLite Robusta (Cero Duplicados)**: Motor de persistencia en modo WAL con deduplicación estricta por título y ruta, prevención de registros fantasma y cálculo exacto del tamaño del archivo.
 * **🧹 Limpieza de Caché**: Herramienta en el panel de Ajustes para vaciar archivos temporales de streaming con un solo clic.
+
+### 4. Sistema de Temas Épicos & Personalización Dinámica
+* **7 Paletas de Color Épicas**: Cambia la atmósfera visual de la aplicación completa al instante sin reiniciar la ventana:
+  - 🔮 **Nebula Violet**: Púrpura eléctrico y cyberpunk clásico original.
+  - ⚡ **Cyber Matrix**: Verde esmeralda neón y terminal hacker.
+  - 🩸 **Crimson Blood**: Rojo carmesí rubí y furia escarlata.
+  - 🌊 **Abyssal Blue**: Azul zafiro cuántico y océano profundo.
+  - 🌌 **Cosmic Cyan**: Cian glacial y turquesa aurora.
+  - 👑 **Golden Eclipse**: Ámbar solar y oro cósmico de lujo.
+  - 🌸 **Neon Sakura**: Magenta láser y luces de Neo-Tokio.
+* **Selector Desplegable Dinámico (`ft.Dropdown`)**: Selector estilizado en Ajustes con badge interactivo de vista previa en tiempo real y persistencia inmediata.
 
 ---
 
