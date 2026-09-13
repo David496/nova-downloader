@@ -43,6 +43,10 @@ cookies.txt
 scratch/
 *.part
 *.ytdl
+*.zip
+ffmpeg/
+ffmpeg_temp/
+ffmpeg_extracted/
 
 # =========================
 # DESCARGAS LOCALES ACCIDENTALES

@@ -8,16 +8,18 @@ import re
 from core.config import config
 from services.player import PlayerService, QtAudioPlayer, MusicTrack
 from services.downloader import DownloadTask
-from ui.flet_styles import AppEvents
+from ui.flet_styles import AppEvents, get_current_palette
 import database.db as db
 
 class EqualizerWidget(ft.Row):
-    def __init__(self, color=ft.Colors.PURPLE_300, bar_count=4):
+    def __init__(self, color=None, bar_count=4):
         super().__init__()
         self.spacing = 3
         self.alignment = ft.MainAxisAlignment.CENTER
         self.vertical_alignment = ft.CrossAxisAlignment.END
         self.height = 14
+        if color is None:
+            color = get_current_palette().light
         self.color = color
         self.bar_count = bar_count
         self.visible = False
@@ -35,6 +37,11 @@ class EqualizerWidget(ft.Row):
             )
             self.bars.append(bar)
         self.controls = self.bars
+
+    def update_color(self, new_color):
+        self.color = new_color
+        for bar in self.bars:
+            bar.bgcolor = new_color
 
     def set_playing(self, is_playing):
         self.visible = is_playing
@@ -244,7 +251,7 @@ class PlayerView(ft.Column):
             self.thumbnail_img.visible = False
             self.placeholder_icon.visible = True
             self.badge_lbl.value = "ESPERANDO PISTA" if lang == "es" else "READY"
-            self.status_dot.bgcolor = ft.Colors.PURPLE_400
+            self.status_dot.bgcolor = get_current_palette().primary
             self.play_btn.content.icon = ft.Icons.PLAY_ARROW_ROUNDED
             self.equalizer.set_playing(False)
             
@@ -258,14 +265,15 @@ class PlayerView(ft.Column):
     def _build_ui(self):
         self.controls.clear()
         lang = config.get("language", "es")
+        pal = get_current_palette()
         
         # ---------------- HEADER ----------------
         header_icon = ft.Container(
-            content=ft.Icon(ft.Icons.RADIO_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+            content=ft.Icon(ft.Icons.RADIO_ROUNDED, color=pal.light, size=22),
             padding=8,
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_500),
+            bgcolor=pal.tint_bg,
             border_radius=12,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400))
+            border=ft.Border.all(1, pal.tint_border)
         )
 
         header = ft.Row([
@@ -286,7 +294,7 @@ class PlayerView(ft.Column):
             expand=True,
             bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
             border_color=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
-            focused_border_color=ft.Colors.PURPLE_400,
+            focused_border_color=pal.primary,
             content_padding=ft.Padding(14, 0, 14, 0),
             on_submit=self.on_search
         )
@@ -294,7 +302,7 @@ class PlayerView(ft.Column):
         self.paste_btn = ft.Container(
             content=ft.IconButton(
                 icon=ft.Icons.CONTENT_PASTE_ROUNDED,
-                icon_color=ft.Colors.PURPLE_300,
+                icon_color=pal.light,
                 icon_size=18,
                 tooltip="Pegar enlace" if lang == "es" else "Paste link",
                 on_click=self.on_paste
@@ -305,7 +313,7 @@ class PlayerView(ft.Column):
             height=44,
             alignment=ft.Alignment.CENTER,
             ink=True,
-            ink_color=ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)
+            ink_color=pal.tint_border
         )
 
         self.search_btn = ft.ElevatedButton(
@@ -314,19 +322,19 @@ class PlayerView(ft.Column):
             height=44,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=14),
-                bgcolor=ft.Colors.PURPLE_600,
+                bgcolor=pal.dark,
                 color=ft.Colors.WHITE,
                 elevation=3
             ),
             on_click=self.on_search
         )
 
-        self.loading_ring = ft.ProgressRing(visible=False, width=20, height=20, stroke_width=2.5, color=ft.Colors.PURPLE_400)
+        self.loading_ring = ft.ProgressRing(visible=False, width=20, height=20, stroke_width=2.5, color=pal.primary)
 
         self.save_playlist_btn = ft.Container(
             content=ft.IconButton(
                 icon=ft.Icons.PUSH_PIN_ROUNDED,
-                icon_color=ft.Colors.PURPLE_300,
+                icon_color=pal.light,
                 icon_size=18,
                 tooltip="Guardar Playlist de YouTube" if lang == "es" else "Pin YouTube Playlist",
                 on_click=self.on_save_playlist_click
@@ -337,7 +345,7 @@ class PlayerView(ft.Column):
             height=44,
             alignment=ft.Alignment.CENTER,
             ink=True,
-            ink_color=ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)
+            ink_color=pal.tint_border
         )
 
         search_row = ft.Row([
@@ -362,8 +370,8 @@ class PlayerView(ft.Column):
         
         self.placeholder_icon = ft.Container(
             content=ft.Column([
-                ft.Icon(ft.Icons.DISC_FULL_ROUNDED, size=64, color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_300)),
-                ft.Text("NOVA PLAYER", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.with_opacity(0.35, ft.Colors.PURPLE_300))
+                ft.Icon(ft.Icons.DISC_FULL_ROUNDED, size=64, color=ft.Colors.with_opacity(0.25, pal.light)),
+                ft.Text("NOVA PLAYER", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.with_opacity(0.35, pal.light))
             ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6),
             width=175,
             height=175,
@@ -374,9 +382,9 @@ class PlayerView(ft.Column):
         )
 
         # Status Pill Badge with Live Equalizer
-        self.status_dot = ft.Container(width=7, height=7, border_radius=3.5, bgcolor=ft.Colors.PURPLE_400)
-        self.badge_lbl = ft.Text("ESPERANDO PISTA" if lang == "es" else "READY", size=9, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_200)
-        self.equalizer = EqualizerWidget(color=ft.Colors.PURPLE_300, bar_count=4)
+        self.status_dot = ft.Container(width=7, height=7, border_radius=3.5, bgcolor=pal.primary)
+        self.badge_lbl = ft.Text("ESPERANDO PISTA" if lang == "es" else "READY", size=9, weight=ft.FontWeight.BOLD, color=pal.light)
+        self.equalizer = EqualizerWidget(color=pal.light, bar_count=4)
         
         self.badge_icon = ft.Container(
             content=ft.Row([
@@ -385,9 +393,9 @@ class PlayerView(ft.Column):
                 self.badge_lbl
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=6),
             padding=ft.Padding(10, 4, 10, 4),
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_500),
+            bgcolor=pal.tint_bg,
             border_radius=16,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400))
+            border=ft.Border.all(1, pal.tint_border)
         )
 
         # Ambient Glow Album Art Container
@@ -399,12 +407,7 @@ class PlayerView(ft.Column):
             width=175,
             height=175,
             border_radius=18,
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=28,
-                color=ft.Colors.with_opacity(0.4, ft.Colors.PURPLE_600),
-                offset=ft.Offset(0, 5)
-            ),
+            shadow=pal.glow_shadow,
             animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
             alignment=ft.Alignment.CENTER
         )
@@ -412,13 +415,13 @@ class PlayerView(ft.Column):
         # HQ 320 KBPS Audio Quality Badge
         self.hq_badge = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.HIGH_QUALITY_ROUNDED, color=ft.Colors.PURPLE_300, size=14),
-                ft.Text("HQ • 320 KBPS", size=9, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_200)
+                ft.Icon(ft.Icons.HIGH_QUALITY_ROUNDED, color=pal.light, size=14),
+                ft.Text("HQ • 320 KBPS", size=9, weight=ft.FontWeight.BOLD, color=pal.light)
             ], spacing=3),
             padding=ft.Padding(8, 4, 8, 4),
-            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.PURPLE_500),
+            bgcolor=pal.tint_bg,
             border_radius=16,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_400))
+            border=ft.Border.all(1, pal.tint_border)
         )
 
         badge_header_row = ft.Row([
@@ -429,7 +432,7 @@ class PlayerView(ft.Column):
         self.track_title = ft.Text("Selecciona una canción" if lang == "es" else "Select a song", size=15, weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, text_align=ft.TextAlign.CENTER, color=ft.Colors.WHITE)
         self.track_artist = ft.Text("Haz clic en cualquier tema de la lista", size=11, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
         
-        self.current_time_lbl = ft.Text("00:00", size=10, color=ft.Colors.PURPLE_300, weight=ft.FontWeight.W_600)
+        self.current_time_lbl = ft.Text("00:00", size=10, color=pal.light, weight=ft.FontWeight.W_600)
         self.total_time_lbl = ft.Text("00:00", size=10, color=ft.Colors.GREY_400, weight=ft.FontWeight.W_600)
 
         # Progress Slider
@@ -437,7 +440,7 @@ class PlayerView(ft.Column):
             min=0,
             max=100,
             value=0,
-            active_color=ft.Colors.PURPLE_400,
+            active_color=pal.primary,
             inactive_color=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
             on_change_start=self.on_slider_start,
             on_change=self.on_slider_change,
@@ -474,9 +477,9 @@ class PlayerView(ft.Column):
             width=56,
             height=56,
             border_radius=28,
-            bgcolor=ft.Colors.PURPLE_600,
+            bgcolor=pal.dark,
             alignment=ft.Alignment.CENTER,
-            border=ft.Border.all(2, ft.Colors.with_opacity(0.4, ft.Colors.PURPLE_300)),
+            border=ft.Border.all(2, pal.tint_border),
             ink=True,
             ink_color=ft.Colors.with_opacity(0.3, ft.Colors.WHITE)
         )
@@ -511,26 +514,26 @@ class PlayerView(ft.Column):
         # Volume control
         self.volume_icon_btn = ft.IconButton(
             icon=ft.Icons.VOLUME_UP_ROUNDED,
-            icon_color=ft.Colors.PURPLE_300,
+            icon_color=pal.light,
             icon_size=16,
             on_click=self.toggle_mute
         )
 
-        self.volume_val_lbl = ft.Text("80%", size=10, color=ft.Colors.PURPLE_200, weight=ft.FontWeight.BOLD)
+        self.volume_val_lbl = ft.Text("80%", size=10, color=pal.light, weight=ft.FontWeight.BOLD)
         
         self.volume_badge = ft.Container(
             content=self.volume_val_lbl,
             padding=ft.Padding(6, 2, 6, 2),
-            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_500),
+            bgcolor=pal.tint_bg,
             border_radius=8,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400))
+            border=ft.Border.all(1, pal.tint_border)
         )
 
         self.volume_slider = ft.Slider(
             min=0.0,
             max=1.0,
             value=0.8,
-            active_color=ft.Colors.PURPLE_300,
+            active_color=pal.light,
             inactive_color=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
             on_change=self.on_volume_change,
             expand=True
@@ -573,9 +576,9 @@ class PlayerView(ft.Column):
 
         # ---------------- RIGHT QUEUE / PLAYLIST PANEL (SAME HEIGHT 490px) ----------------
         self.queue_count_lbl = ft.Container(
-            content=ft.Text("0 canciones" if lang == "es" else "0 tracks", size=11, color=ft.Colors.PURPLE_300, weight=ft.FontWeight.W_600),
+            content=ft.Text("0 canciones" if lang == "es" else "0 tracks", size=11, color=pal.light, weight=ft.FontWeight.W_600),
             padding=ft.Padding(10, 4, 10, 4),
-            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.PURPLE_500),
+            bgcolor=pal.tint_bg,
             border_radius=10
         )
 
@@ -592,7 +595,7 @@ class PlayerView(ft.Column):
         queue_container = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.QUEUE_MUSIC_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Icon(ft.Icons.QUEUE_MUSIC_ROUNDED, color=pal.primary, size=20),
                     ft.Text("Cola de Reproducción" if lang == "es" else "Playback Queue", size=15, weight=ft.FontWeight.BOLD, expand=True, color=ft.Colors.WHITE),
                     self.queue_count_lbl,
                     self.clear_queue_btn
@@ -628,11 +631,11 @@ class PlayerView(ft.Column):
             self.total_time_lbl.value = self._format_seconds(dur)
 
         if hasattr(self, 'is_shuffle') and self.is_shuffle:
-            self.shuffle_container.bgcolor = ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_500)
-            self.shuffle_container.content.icon_color = ft.Colors.PURPLE_300
+            self.shuffle_container.bgcolor = pal.active_bg
+            self.shuffle_container.content.icon_color = pal.light
         if hasattr(self, 'is_repeat') and self.is_repeat:
-            self.repeat_container.bgcolor = ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_500)
-            self.repeat_container.content.icon_color = ft.Colors.PURPLE_300
+            self.repeat_container.bgcolor = pal.active_bg
+            self.repeat_container.content.icon_color = pal.light
 
         self._update_hero_ui()
         self._update_queue_ui()
@@ -640,6 +643,7 @@ class PlayerView(ft.Column):
 
     def _refresh_saved_playlists_ui(self):
         lang = config.get("language", "es")
+        pal = get_current_palette()
         saved_items = db.get_saved_playlists() or []
         
         chips = [
@@ -661,15 +665,15 @@ class PlayerView(ft.Column):
                 chips.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Icon(ft.Icons.FOLDER_SPECIAL_ROUNDED, color=ft.Colors.PURPLE_300, size=15),
-                            ft.Text(f"Ver todas ({len(saved_items)}) →" if lang == "es" else f"View all ({len(saved_items)}) →", size=11, color=ft.Colors.PURPLE_200, weight=ft.FontWeight.BOLD)
+                            ft.Icon(ft.Icons.FOLDER_SPECIAL_ROUNDED, color=pal.light, size=15),
+                            ft.Text(f"Ver todas ({len(saved_items)}) →" if lang == "es" else f"View all ({len(saved_items)}) →", size=11, color=pal.light, weight=ft.FontWeight.BOLD)
                         ], spacing=4),
                         padding=ft.Padding(10, 3, 10, 3),
-                        bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_600),
+                        bgcolor=pal.tint_bg,
                         border_radius=12,
-                        border=ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400)),
+                        border=ft.Border.all(1, pal.tint_border),
                         ink=True,
-                        ink_color=ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400),
+                        ink_color=pal.active_bg,
                         on_click=lambda ev: self.open_all_playlists_modal(ev)
                     )
                 )
@@ -682,6 +686,7 @@ class PlayerView(ft.Column):
 
     def _create_saved_playlist_chip(self, p_id, title, url, thumb, count):
         lang = config.get("language", "es")
+        pal = get_current_palette()
         disp_title = (title[:18] + "...") if len(title) > 20 else title
         count_str = f" • {count}" if count > 0 else ""
         
@@ -696,16 +701,16 @@ class PlayerView(ft.Column):
 
         return ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=ft.Colors.PURPLE_300, size=15),
+                ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=pal.light, size=15),
                 ft.Text(f"{disp_title}{count_str}", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.W_500),
                 close_btn
             ], spacing=4, alignment=ft.MainAxisAlignment.CENTER),
             padding=ft.Padding(10, 3, 8, 3),
-            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500),
+            bgcolor=pal.tint_bg,
             border_radius=12,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_400)),
+            border=ft.Border.all(1, pal.tint_border),
             ink=True,
-            ink_color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_400),
+            ink_color=pal.active_bg,
             on_click=lambda _: asyncio.create_task(self.load_saved_playlist(url))
         )
 
@@ -725,6 +730,7 @@ class PlayerView(ft.Column):
 
         try:
             lang = config.get("language", "es")
+            pal = get_current_palette()
             saved_items = db.get_saved_playlists() or []
             print(f"📋 Cargando {len(saved_items)} playlists guardadas en el modal...")
 
@@ -737,7 +743,7 @@ class PlayerView(ft.Column):
                 content_padding=ft.Padding(10, 0, 10, 0),
                 bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
                 border_color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
-                focused_border_color=ft.Colors.PURPLE_400
+                focused_border_color=pal.primary
             )
 
             list_col = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO)
@@ -788,7 +794,7 @@ class PlayerView(ft.Column):
 
                         item_card = ft.Container(
                             content=ft.Row([
-                                ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                                ft.Icon(ft.Icons.PLAYLIST_PLAY_ROUNDED, color=pal.light, size=22),
                                 ft.Column([
                                     ft.Text(disp_t, weight=ft.FontWeight.BOLD, size=12, color=ft.Colors.WHITE, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                                     ft.Text(f"{count_lbl} • Agregado {p_date[:10] if p_date else ''}", size=10, color=ft.Colors.GREY_400)
@@ -797,7 +803,7 @@ class PlayerView(ft.Column):
                                     "▶️ Cargar" if lang == "es" else "▶️ Load",
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=8),
-                                        bgcolor=ft.Colors.PURPLE_600,
+                                        bgcolor=pal.dark,
                                         color=ft.Colors.WHITE
                                     ),
                                     height=32,
@@ -828,7 +834,7 @@ class PlayerView(ft.Column):
 
             dlg = ft.AlertDialog(
                 title=ft.Row([
-                    ft.Icon(ft.Icons.LIBRARY_MUSIC_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                    ft.Icon(ft.Icons.LIBRARY_MUSIC_ROUNDED, color=pal.light, size=22),
                     ft.Text(f"Mis Playlists Guardadas ({len(saved_items)})" if lang == "es" else f"Saved Playlists ({len(saved_items)})", size=16, weight=ft.FontWeight.BOLD)
                 ], spacing=8),
                 content=ft.Container(
@@ -981,13 +987,14 @@ class PlayerView(ft.Column):
     def _update_queue_ui(self):
         self.queue_list.controls.clear()
         lang = config.get("language", "es")
+        pal = get_current_palette()
         self.queue_count_lbl.content.value = f"{len(self.queue)} canciones" if lang == "es" else f"{len(self.queue)} tracks"
 
         if not self.queue:
             self.queue_list.controls.append(
                 ft.Container(
                     content=ft.Column([
-                        ft.Icon(ft.Icons.SEARCH_OFF_ROUNDED, size=44, color=ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_300)),
+                        ft.Icon(ft.Icons.SEARCH_OFF_ROUNDED, size=44, color=ft.Colors.with_opacity(0.3, pal.light)),
                         ft.Text("Busca una canción o pega un enlace de YouTube para ver la lista" if lang == "es" else "Search a song or paste a YouTube link to view list", color=ft.Colors.GREY_400, size=12, text_align=ft.TextAlign.CENTER)
                     ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
                     alignment=ft.Alignment.CENTER,
@@ -1012,12 +1019,12 @@ class PlayerView(ft.Column):
             is_downloading = not is_downloaded and ((t_url in self.active_download_urls) or (clean_t in self.active_download_titles))
 
             if is_active:
-                bg = ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_600)
+                bg = pal.active_bg
                 card_border = ft.Border(
-                    left=ft.BorderSide(4, ft.Colors.PURPLE_400),
-                    top=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)),
-                    right=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)),
-                    bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400))
+                    left=ft.BorderSide(4, pal.primary),
+                    top=ft.BorderSide(1, pal.tint_border),
+                    right=ft.BorderSide(1, pal.tint_border),
+                    bottom=ft.BorderSide(1, pal.tint_border)
                 )
             else:
                 bg = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
@@ -1031,7 +1038,7 @@ class PlayerView(ft.Column):
                     ft.Container(
                         content=ft.Text("▶ REPRODUCIENDO" if lang == "es" else "▶ PLAYING", size=9, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                         padding=ft.Padding(6, 2, 6, 2),
-                        bgcolor=ft.Colors.PURPLE_600,
+                        bgcolor=pal.dark,
                         border_radius=6
                     )
                 )
@@ -1055,7 +1062,7 @@ class PlayerView(ft.Column):
                 )
 
             thumb_control = ft.Image(src=track.thumbnail, width=42, height=42, border_radius=8, fit=ft.BoxFit.COVER) if track.thumbnail else ft.Container(
-                content=ft.Icon(ft.Icons.MUSIC_NOTE, size=20, color=ft.Colors.PURPLE_300),
+                content=ft.Icon(ft.Icons.MUSIC_NOTE, size=20, color=pal.light),
                 width=42, height=42, border_radius=8, bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE), alignment=ft.Alignment.CENTER
             )
 
@@ -1075,18 +1082,18 @@ class PlayerView(ft.Column):
             # Native Flet Material Ink & Hover Effect over the ENTIRE song rectangle
             item = ft.Container(
                 content=ft.Row([
-                    ft.Text(f"{idx+1}", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300 if is_active else ft.Colors.GREY_500, width=22),
+                    ft.Text(f"{idx+1}", size=11, weight=ft.FontWeight.BOLD, color=pal.light if is_active else ft.Colors.GREY_500, width=22),
                     thumb_control,
                     ft.Column([
                         ft.Text(track.title, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.W_500, size=12, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, color=ft.Colors.WHITE if is_active else ft.Colors.GREY_200),
                         ft.Row([
-                            ft.Text(f"{track.artist} • {dur_str}", size=10, color=ft.Colors.PURPLE_200 if is_active else ft.Colors.GREY_400),
+                            ft.Text(f"{track.artist} • {dur_str}", size=10, color=pal.light if is_active else ft.Colors.GREY_400),
                             *badges
                         ], spacing=4)
                     ], spacing=2, expand=True),
                     ft.IconButton(
                         icon=ft.Icons.PLAY_ARROW_ROUNDED if not (is_active and self.audio_player.is_playing) else ft.Icons.PAUSE_ROUNDED,
-                        icon_color=ft.Colors.PURPLE_300 if is_active else ft.Colors.WHITE,
+                        icon_color=pal.light if is_active else ft.Colors.WHITE,
                         icon_size=20,
                         tooltip="Reproducir" if lang == "es" else "Play",
                         on_click=lambda _, i=idx: asyncio.create_task(self.play_track_at(i))
@@ -1104,7 +1111,7 @@ class PlayerView(ft.Column):
                 border_radius=12,
                 border=card_border,
                 ink=True,
-                ink_color=ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_500),
+                ink_color=pal.active_bg,
                 animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
                 on_click=lambda _, i=idx: asyncio.create_task(self.play_track_at(i))
             )
@@ -1114,8 +1121,8 @@ class PlayerView(ft.Column):
                     if active:
                         return
                     if e.data == "true":
-                        cnt.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_400)
-                        cnt.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400))
+                        cnt.bgcolor = pal.hover_bg
+                        cnt.border = ft.Border.all(1, pal.hover_border)
                     else:
                         cnt.bgcolor = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
                         cnt.border = ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
@@ -1219,20 +1226,22 @@ class PlayerView(ft.Column):
         asyncio.create_task(self.play_track_at(prev_idx))
 
     def toggle_shuffle(self, e=None):
+        pal = get_current_palette()
         self.is_shuffle = not self.is_shuffle
         if self.is_shuffle:
-            self.shuffle_container.bgcolor = ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_500)
-            self.shuffle_container.content.icon_color = ft.Colors.PURPLE_300
+            self.shuffle_container.bgcolor = pal.active_bg
+            self.shuffle_container.content.icon_color = pal.light
         else:
             self.shuffle_container.bgcolor = None
             self.shuffle_container.content.icon_color = ft.Colors.GREY_400
         self._safe_update()
 
     def toggle_repeat(self, e=None):
+        pal = get_current_palette()
         self.is_repeat = not self.is_repeat
         if self.is_repeat:
-            self.repeat_container.bgcolor = ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_500)
-            self.repeat_container.content.icon_color = ft.Colors.PURPLE_300
+            self.repeat_container.bgcolor = pal.active_bg
+            self.repeat_container.content.icon_color = pal.light
         else:
             self.repeat_container.bgcolor = None
             self.repeat_container.content.icon_color = ft.Colors.GREY_400

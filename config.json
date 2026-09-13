@@ -1,5 +1,6 @@
 {
     "theme": "dark",
+    "theme_palette": "nebula_violet",
     "language": "es",
     "download_dir": "",
     "embed_metadata": true,

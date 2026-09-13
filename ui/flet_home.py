@@ -1,12 +1,14 @@
 import flet as ft
 from services.downloader import InfoExtractor
 from core.config import config
+from ui.flet_styles import get_current_palette
 import os
 import asyncio
 
 class FormatCard(ft.Container):
     def __init__(self, f_type, label, desc, options, on_click, pill_text=None, pill_color=None):
         super().__init__()
+        pal = get_current_palette()
         self.f_type = f_type
         self.label = label
         self.options = options
@@ -17,7 +19,7 @@ class FormatCard(ft.Container):
         
         trailing_controls = []
         if pill_text:
-            p_color = pill_color or (ft.Colors.PURPLE_300 if f_type == "video" else ft.Colors.CYAN_300)
+            p_color = pill_color or (pal.light if f_type == "video" else ft.Colors.CYAN_300)
             pill = ft.Container(
                 content=ft.Text(pill_text, size=9, weight=ft.FontWeight.BOLD, color=p_color),
                 padding=ft.Padding(6, 2, 6, 2),
@@ -27,15 +29,15 @@ class FormatCard(ft.Container):
             )
             trailing_controls.append(pill)
 
-        self.check_icon = ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=ft.Colors.PURPLE_300, size=16, visible=False)
+        self.check_icon = ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=pal.primary, size=16, visible=False)
         trailing_controls.append(self.check_icon)
 
         self.content = ft.Row(
             [
                 ft.Container(
-                    content=ft.Icon(icon, color=ft.Colors.PURPLE_300, size=18),
+                    content=ft.Icon(icon, color=pal.light, size=18),
                     padding=6,
-                    bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500),
+                    bgcolor=pal.tint_bg,
                     border_radius=8
                 ),
                 ft.Column(
@@ -61,11 +63,12 @@ class FormatCard(ft.Container):
         self.on_hover = self._handle_hover
 
     def _handle_hover(self, e):
+        pal = get_current_palette()
         if self.is_selected:
             return
         if e.data == "true":
-            self.bgcolor = ft.Colors.with_opacity(0.07, ft.Colors.PURPLE_500)
-            self.border = ft.Border.all(1, ft.Colors.with_opacity(0.35, ft.Colors.PURPLE_400))
+            self.bgcolor = pal.hover_bg
+            self.border = ft.Border.all(1, pal.hover_border)
         else:
             self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
             self.border = ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
@@ -78,10 +81,11 @@ class FormatCard(ft.Container):
         await self.on_click_callback(self)
 
     async def set_selected(self, selected):
+        pal = get_current_palette()
         self.is_selected = selected
         if selected:
-            self.bgcolor = ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_600)
-            self.border = ft.Border.all(1.5, ft.Colors.PURPLE_400)
+            self.bgcolor = pal.active_bg
+            self.border = ft.Border.all(1.5, pal.primary)
             self.check_icon.visible = True
         else:
             self.bgcolor = ft.Colors.with_opacity(0.03, ft.Colors.WHITE)
@@ -110,12 +114,13 @@ class HomeView(ft.Column):
     def _build_ui(self):
         self.controls.clear()
         lang = config.get("language", "es")
+        pal = get_current_palette()
 
         # Compact Hero Section
         self.controls.append(
             ft.Container(
                 content=ft.Column([
-                    ft.Text("Nova Downloader", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_400),
+                    ft.Text("Nova Downloader", size=24, weight=ft.FontWeight.BOLD, color=pal.primary),
                     ft.Text("La forma más rápida y elegante de bajar contenido" if lang == "es" else "The fastest and most elegant way to download content", size=12, color=ft.Colors.GREY_400),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
                 margin=ft.Margin(0, 5, 0, 2)
@@ -130,7 +135,7 @@ class HomeView(ft.Column):
             text_size=13,
             expand=True,
             border_color=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
-            focused_border_color=ft.Colors.PURPLE_400,
+            focused_border_color=pal.primary,
             bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
             on_submit=self.on_analyze,
             prefix_icon=ft.Icons.LINK_ROUNDED,
@@ -143,7 +148,7 @@ class HomeView(ft.Column):
             width=120,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=12),
-                bgcolor=ft.Colors.PURPLE_600,
+                bgcolor=pal.dark,
                 color=ft.Colors.WHITE,
                 elevation=3
             ),
@@ -153,7 +158,7 @@ class HomeView(ft.Column):
         self.paste_btn = ft.Container(
             content=ft.IconButton(
                 icon=ft.Icons.CONTENT_PASTE_ROUNDED,
-                icon_color=ft.Colors.PURPLE_300,
+                icon_color=pal.light,
                 icon_size=18,
                 tooltip="Pegar desde el portapapeles" if lang == "es" else "Paste from clipboard",
                 on_click=self.on_paste
@@ -170,15 +175,15 @@ class HomeView(ft.Column):
         self.clipboard_url_text = ft.Text("", size=11, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=True)
         self.clipboard_banner = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.PASTE_ROUNDED, color=ft.Colors.PURPLE_300, size=16),
-                ft.Text("Enlace detectado:" if lang == "es" else "Detected link:", size=11, color=ft.Colors.PURPLE_200, weight=ft.FontWeight.W_500),
+                ft.Icon(ft.Icons.PASTE_ROUNDED, color=pal.light, size=16),
+                ft.Text("Enlace detectado:" if lang == "es" else "Detected link:", size=11, color=pal.light, weight=ft.FontWeight.W_500),
                 self.clipboard_url_text,
                 ft.ElevatedButton(
                     "Pegar y Analizar" if lang == "es" else "Paste & Analyze",
                     height=28,
                     style=ft.ButtonStyle(
                         shape=ft.RoundedRectangleBorder(radius=8),
-                        bgcolor=ft.Colors.PURPLE_600,
+                        bgcolor=pal.dark,
                         color=ft.Colors.WHITE,
                         padding=ft.Padding(10, 0, 10, 0)
                     ),
@@ -192,8 +197,8 @@ class HomeView(ft.Column):
                     on_click=self.on_clipboard_banner_dismiss
                 )
             ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_600),
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400)),
+            bgcolor=pal.tint_bg,
+            border=ft.Border.all(1, pal.tint_border),
             border_radius=12,
             padding=ft.Padding(12, 6, 8, 6),
             visible=False,
@@ -207,8 +212,8 @@ class HomeView(ft.Column):
         )
 
         # Status & Loading
-        self.status_text = ft.Text("", size=12, color=ft.Colors.PURPLE_200)
-        self.progress_ring = ft.ProgressRing(visible=False, width=18, height=18, stroke_width=2.5, color=ft.Colors.PURPLE_400)
+        self.status_text = ft.Text("", size=12, color=pal.light)
+        self.progress_ring = ft.ProgressRing(visible=False, width=18, height=18, stroke_width=2.5, color=pal.primary)
         self.controls.append(ft.Row([self.progress_ring, self.status_text], alignment=ft.MainAxisAlignment.CENTER))
 
         # Compact Results Area
@@ -239,7 +244,7 @@ class HomeView(ft.Column):
             width=200,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=12),
-                bgcolor={ft.ControlState.DEFAULT: ft.Colors.PURPLE_700, ft.ControlState.DISABLED: ft.Colors.with_opacity(0.1, ft.Colors.WHITE)},
+                bgcolor={ft.ControlState.DEFAULT: pal.dark, ft.ControlState.DISABLED: ft.Colors.with_opacity(0.1, ft.Colors.WHITE)},
                 color=ft.Colors.WHITE,
                 elevation=4
             ),
@@ -251,7 +256,7 @@ class HomeView(ft.Column):
             ft.Row([
                 ft.Container(
                     content=ft.Column([
-                        ft.Row([ft.Icon(ft.Icons.VIDEOCAM_ROUNDED, size=18, color=ft.Colors.PURPLE_300), ft.Text("Vídeo (MP4)" if lang == "es" else "Video (MP4)", size=15, weight=ft.FontWeight.W_600)]),
+                        ft.Row([ft.Icon(ft.Icons.VIDEOCAM_ROUNDED, size=18, color=pal.light), ft.Text("Vídeo (MP4)" if lang == "es" else "Video (MP4)", size=15, weight=ft.FontWeight.W_600)]),
                         self.video_list
                     ], spacing=8),
                     expand=True,
@@ -262,7 +267,7 @@ class HomeView(ft.Column):
                 ),
                 ft.Container(
                     content=ft.Column([
-                        ft.Row([ft.Icon(ft.Icons.HEADPHONES_ROUNDED, size=18, color=ft.Colors.PURPLE_300), ft.Text("Solo Audio" if lang == "es" else "Audio Only", size=15, weight=ft.FontWeight.W_600)]),
+                        ft.Row([ft.Icon(ft.Icons.HEADPHONES_ROUNDED, size=18, color=pal.light), ft.Text("Solo Audio" if lang == "es" else "Audio Only", size=15, weight=ft.FontWeight.W_600)]),
                         self.audio_list
                     ], spacing=8),
                     expand=True,
@@ -485,9 +490,10 @@ class HomeView(ft.Column):
         self.download_btn.disabled = True
         config.get("language", "es")
 
+        pal = get_current_palette()
         video_qualities = [
             ("4K Ultra HD", "Calidad máxima (2160p)", {'format': 'bestvideo[height<=2160]+bestaudio/best[height<=2160]/best', 'merge_output_format': 'mp4'}, "4K UHD", ft.Colors.AMBER_400),
-            ("1080p Full HD", "Alta definición (1080p)", {'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best', 'merge_output_format': 'mp4'}, "1080p FHD", ft.Colors.PURPLE_300),
+            ("1080p Full HD", "Alta definición (1080p)", {'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best', 'merge_output_format': 'mp4'}, "1080p FHD", pal.light),
             ("720p HD", "Calidad estándar (720p)", {'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best', 'merge_output_format': 'mp4'}, "720p HD", ft.Colors.BLUE_300),
             ("480p / 360p", "Ahorro de datos", {'format': 'bestvideo[height<=480]+bestaudio/best[height<=480]/best', 'merge_output_format': 'mp4'}, "SD", ft.Colors.GREY_400),
         ]
@@ -520,7 +526,7 @@ class HomeView(ft.Column):
                 'format': 'bestaudio/best',
                 'writethumbnail': embed_meta,
                 'postprocessors': m4a_pps
-            }, "M4A", ft.Colors.PURPLE_300),
+            }, "M4A", pal.light),
             ("Formato WAV", "Sin compresión", {
                 'format': 'bestaudio/best',
                 'postprocessors': wav_pps

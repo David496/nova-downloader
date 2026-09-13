@@ -5,7 +5,7 @@ from ui.flet_downloads import DownloadsView
 from ui.flet_library import LibraryView
 from ui.flet_settings import SettingsView
 from ui.flet_player import PlayerView
-from ui.flet_styles import get_theme, AppColors, AppEvents
+from ui.flet_styles import get_theme, AppColors, AppEvents, get_current_palette
 from core.config import config
 import asyncio
 import os
@@ -17,10 +17,36 @@ async def main(page: ft.Page):
         page.theme = get_theme("dark")
         
         colors = AppColors(True)
+        pal = get_current_palette()
         page.bgcolor = colors.BG_MAIN
         rail.bgcolor = colors.BG_SIDEBAR
         content_container.bgcolor = colors.BG_MAIN
         
+        # Dynamic palette updates for sidebar and navigation
+        rail.indicator_color = pal.active_bg
+        sidebar_logo_box.bgcolor = pal.tint_bg
+        sidebar_logo_box.border = ft.Border.all(1, pal.tint_border)
+        sidebar_logo_icon.color = pal.light
+        sidebar_logo_subtext.color = pal.light
+        developer_code_icon.color = pal.light
+        developer_name_text.color = pal.light
+        
+        # Update rail destinations icons
+        for dest in rail.destinations:
+            if dest.selected_icon and hasattr(dest.selected_icon, "color"):
+                dest.selected_icon.color = pal.light
+                
+        # Update persistent mini-player dock
+        bottom_dock.border = ft.Border(top=ft.BorderSide(1, pal.tint_border))
+        dock_thumb_icon.bgcolor = pal.tint_bg
+        dock_thumb_icon_glyph.color = pal.light
+        dock_artist.color = pal.light
+        dock_play_btn.bgcolor = pal.dark
+        dock_slider.active_color = pal.light
+        dock_vol_icon.icon_color = pal.light
+        dock_vol_slider.active_color = pal.light
+        dock_expand_btn.icon_color = pal.light
+
         lang = config.get("language", "es")
         labels = {
             "es": ["Inicio", "Reproductor", "Descargas", "Biblioteca", "Ajustes"],
@@ -57,6 +83,7 @@ async def main(page: ft.Page):
     page.padding = 0
     
     colors_init = AppColors(True)
+    pal_init = get_current_palette()
     page.bgcolor = colors_init.BG_MAIN
 
     # Views initialization
@@ -88,17 +115,18 @@ async def main(page: ft.Page):
 
     # ---------------- Persistent Floating Bottom Mini-Player Bar Dock ----------------
     dock_thumb_img = ft.Image(src="", width=42, height=42, border_radius=8, fit=ft.BoxFit.COVER, visible=False)
+    dock_thumb_icon_glyph = ft.Icon(ft.Icons.MUSIC_NOTE_ROUNDED, size=20, color=pal_init.light)
     dock_thumb_icon = ft.Container(
-        content=ft.Icon(ft.Icons.MUSIC_NOTE_ROUNDED, size=20, color=ft.Colors.PURPLE_300),
+        content=dock_thumb_icon_glyph,
         width=42,
         height=42,
         border_radius=8,
-        bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_500),
+        bgcolor=pal_init.tint_bg,
         alignment=ft.Alignment.CENTER
     )
     dock_thumb_stack = ft.Stack([dock_thumb_icon, dock_thumb_img])
     dock_title = ft.Text("No hay reproducción activa", size=12, weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, color=ft.Colors.WHITE)
-    dock_artist = ft.Text("Toca para abrir reproductor", size=10, color=ft.Colors.PURPLE_200, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
+    dock_artist = ft.Text("Toca para abrir reproductor", size=10, color=pal_init.light, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
     
     dock_info_col = ft.Container(
         content=ft.Row([
@@ -121,7 +149,7 @@ async def main(page: ft.Page):
         icon=ft.Icons.PLAY_ARROW_ROUNDED,
         icon_size=22,
         icon_color=ft.Colors.WHITE,
-        bgcolor=ft.Colors.PURPLE_600,
+        bgcolor=pal_init.dark,
         tooltip="Reproducir / Pausar",
         on_click=lambda _: player_view.toggle_play_pause()
     )
@@ -140,7 +168,7 @@ async def main(page: ft.Page):
         max=100.0,
         value=0.0,
         height=18,
-        active_color=ft.Colors.PURPLE_300,
+        active_color=pal_init.light,
         inactive_color=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
         expand=True
     )
@@ -159,14 +187,14 @@ async def main(page: ft.Page):
     dock_vol_icon = ft.IconButton(
         icon=ft.Icons.VOLUME_UP_ROUNDED,
         icon_size=18,
-        icon_color=ft.Colors.PURPLE_300
+        icon_color=pal_init.light
     )
     dock_vol_slider = ft.Slider(
         min=0.0,
         max=1.0,
         value=0.8,
         width=80,
-        active_color=ft.Colors.PURPLE_300,
+        active_color=pal_init.light,
         inactive_color=ft.Colors.with_opacity(0.12, ft.Colors.WHITE)
     )
 
@@ -184,7 +212,7 @@ async def main(page: ft.Page):
     dock_expand_btn = ft.IconButton(
         icon=ft.Icons.OPEN_IN_FULL_ROUNDED,
         icon_size=18,
-        icon_color=ft.Colors.PURPLE_300,
+        icon_color=pal_init.light,
         tooltip="Abrir reproductor completo",
         on_click=lambda _: navigate(1)
     )
@@ -199,7 +227,7 @@ async def main(page: ft.Page):
         height=72,
         padding=ft.Padding(18, 6, 18, 6),
         bgcolor=ft.Colors.with_opacity(0.92, colors_init.BG_SIDEBAR),
-        border=ft.Border(top=ft.BorderSide(1, ft.Colors.with_opacity(0.12, ft.Colors.PURPLE_400))),
+        border=ft.Border(top=ft.BorderSide(1, pal_init.tint_border)),
         visible=False,
         animate=ft.Animation(250, ft.AnimationCurve.EASE_OUT)
     )
@@ -258,6 +286,18 @@ async def main(page: ft.Page):
         page.update()
 
     # Visually Enhanced Modern Glassmorphic Sidebar
+    sidebar_logo_icon = ft.Icon(ft.Icons.DOWNLOAD_FOR_OFFLINE_ROUNDED, color=pal_init.light, size=22)
+    sidebar_logo_box = ft.Container(
+        content=sidebar_logo_icon,
+        padding=8,
+        bgcolor=pal_init.tint_bg,
+        border_radius=12,
+        border=ft.Border.all(1, pal_init.tint_border)
+    )
+    sidebar_logo_subtext = ft.Text("DOWNLOADER", size=9, weight=ft.FontWeight.W_600, color=pal_init.light)
+    developer_code_icon = ft.Icon(ft.Icons.CODE_ROUNDED, size=13, color=pal_init.light)
+    developer_name_text = ft.Text("David496", size=11, weight=ft.FontWeight.BOLD, color=pal_init.light)
+
     rail = ft.NavigationRail(
         selected_index=0,
         extended=True,
@@ -265,22 +305,16 @@ async def main(page: ft.Page):
         min_extended_width=210,
         group_alignment=-0.95,
         bgcolor=colors_init.BG_SIDEBAR,
-        indicator_color=ft.Colors.with_opacity(0.18, ft.Colors.PURPLE_500),
+        indicator_color=pal_init.active_bg,
         indicator_shape=ft.RoundedRectangleBorder(radius=14),
         selected_label_text_style=ft.TextStyle(color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD, size=12.5),
         unselected_label_text_style=ft.TextStyle(color=ft.Colors.GREY_400, weight=ft.FontWeight.W_500, size=12.5),
         leading=ft.Container(
             content=ft.Row([
-                ft.Container(
-                    content=ft.Icon(ft.Icons.DOWNLOAD_FOR_OFFLINE_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
-                    padding=8,
-                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500),
-                    border_radius=12,
-                    border=ft.Border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.PURPLE_400))
-                ),
+                sidebar_logo_box,
                 ft.Column([
                     ft.Text("NOVA", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Text("DOWNLOADER", size=9, weight=ft.FontWeight.W_600, color=ft.Colors.PURPLE_300)
+                    sidebar_logo_subtext
                 ], spacing=0)
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
             padding=ft.Padding(12, 18, 12, 18),
@@ -290,10 +324,10 @@ async def main(page: ft.Page):
             content=ft.Container(
                 content=ft.Column([
                     ft.Row([
-                        ft.Icon(ft.Icons.CODE_ROUNDED, size=13, color=ft.Colors.PURPLE_300),
+                        developer_code_icon,
                         ft.Text("Desarrollado por", size=10, color=ft.Colors.GREY_400)
                     ], alignment=ft.MainAxisAlignment.CENTER, spacing=4),
-                    ft.Text("David496", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300)
+                    developer_name_text
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
                 padding=ft.Padding(12, 8, 12, 8),
                 bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
@@ -305,27 +339,27 @@ async def main(page: ft.Page):
         destinations=[
             ft.NavigationRailDestination(
                 icon=ft.Icon(ft.Icons.HOME_OUTLINED, color=ft.Colors.GREY_400, size=20),
-                selected_icon=ft.Icon(ft.Icons.HOME_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                selected_icon=ft.Icon(ft.Icons.HOME_ROUNDED, color=pal_init.light, size=22),
                 label="Inicio"
             ),
             ft.NavigationRailDestination(
                 icon=ft.Icon(ft.Icons.RADIO_OUTLINED, color=ft.Colors.GREY_400, size=20),
-                selected_icon=ft.Icon(ft.Icons.RADIO_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                selected_icon=ft.Icon(ft.Icons.RADIO_ROUNDED, color=pal_init.light, size=22),
                 label="Reproductor"
             ),
             ft.NavigationRailDestination(
                 icon=ft.Icon(ft.Icons.DOWNLOAD_OUTLINED, color=ft.Colors.GREY_400, size=20),
-                selected_icon=ft.Icon(ft.Icons.DOWNLOAD_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                selected_icon=ft.Icon(ft.Icons.DOWNLOAD_ROUNDED, color=pal_init.light, size=22),
                 label="Descargas"
             ),
             ft.NavigationRailDestination(
                 icon=ft.Icon(ft.Icons.VIDEO_LIBRARY_OUTLINED, color=ft.Colors.GREY_400, size=20),
-                selected_icon=ft.Icon(ft.Icons.VIDEO_LIBRARY_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                selected_icon=ft.Icon(ft.Icons.VIDEO_LIBRARY_ROUNDED, color=pal_init.light, size=22),
                 label="Biblioteca"
             ),
             ft.NavigationRailDestination(
                 icon=ft.Icon(ft.Icons.SETTINGS_OUTLINED, color=ft.Colors.GREY_400, size=20),
-                selected_icon=ft.Icon(ft.Icons.SETTINGS_ROUNDED, color=ft.Colors.PURPLE_300, size=22),
+                selected_icon=ft.Icon(ft.Icons.SETTINGS_ROUNDED, color=pal_init.light, size=22),
                 label="Ajustes"
             ),
         ],

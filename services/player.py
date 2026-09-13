@@ -16,6 +16,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from PySide6.QtCore import QCoreApplication, QUrl, QTimer
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QMediaDevices
+from services.downloader import get_ffmpeg_location
 
 class MusicTrack:
     def __init__(self, title, artist, duration, thumbnail, url, track_id, stream_url=None):
@@ -357,6 +358,9 @@ class PlayerService:
             'socket_timeout': 10,
             'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
+        ff_loc = get_ffmpeg_location()
+        if ff_loc:
+            ydl_opts['ffmpeg_location'] = ff_loc
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])

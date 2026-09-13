@@ -1,3 +1,4 @@
+import sys
 import yt_dlp
 import asyncio
 import time
@@ -11,13 +12,42 @@ from core.config import config
 from utils.cookies import apply_auto_cookies
 
 def get_ffmpeg_location():
-    """Detects and returns the absolute directory path of ffmpeg.exe to ensure instant 1st-run video/audio merging."""
+    """
+    Detects and returns the absolute directory path of ffmpeg.exe.
+    Prioritizes bundled/portable ffmpeg next to the executable, ensuring 100% standalone reliability.
+    """
+    # 1. Check if running as compiled/frozen PyInstaller executable
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        candidates = [
+            os.path.join(exe_dir, "ffmpeg"),
+            exe_dir,
+            os.path.join(exe_dir, "_internal", "ffmpeg"),
+            os.path.join(exe_dir, "_internal"),
+            getattr(sys, '_MEIPASS', ''),
+            os.path.join(getattr(sys, '_MEIPASS', ''), "ffmpeg")
+        ]
+        for c in candidates:
+            if c and os.path.exists(os.path.join(c, "ffmpeg.exe")):
+                return c
+
+    # 2. Check local project root ffmpeg directory (running from source)
+    proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    candidates = [
+        os.path.join(proj_root, "ffmpeg"),
+        os.path.join(proj_root, "bin"),
+        r"C:\ffmpeg\bin",
+        r"C:\ffmpeg"
+    ]
+    for c in candidates:
+        if os.path.exists(os.path.join(c, "ffmpeg.exe")):
+            return c
+
+    # 3. Fallback to system PATH
     ff = shutil.which('ffmpeg')
     if ff:
         return os.path.dirname(ff)
-    for candidate in [r"C:\ffmpeg\bin", r"C:\ffmpeg", os.path.join(os.path.dirname(os.path.dirname(__file__)), "ffmpeg")]:
-        if os.path.exists(os.path.join(candidate, "ffmpeg.exe")):
-            return candidate
+
     return None
 
 class DownloadTask:

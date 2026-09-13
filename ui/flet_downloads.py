@@ -4,22 +4,23 @@ import os
 import re
 import asyncio
 from core.config import config
-from ui.flet_styles import AppEvents
+from ui.flet_styles import AppEvents, get_current_palette
 
 class DownloadItem(ft.Container):
     def __init__(self, task):
         super().__init__()
         self.task = task
         self.task_id = task.task_id
+        pal = get_current_palette()
         
         is_audio = task.file_type == "audio"
         icon_type = ft.Icons.MUSIC_NOTE_ROUNDED if is_audio else ft.Icons.VIDEO_LIBRARY_ROUNDED
-        icon_color = ft.Colors.PURPLE_300 if is_audio else ft.Colors.AMBER_300
+        icon_color = pal.light if is_audio else ft.Colors.AMBER_300
 
         self.title_text = ft.Text(task.title, weight=ft.FontWeight.BOLD, size=13, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
         self.status_text = ft.Text("En cola..." if config.get("language") == "es" else "Queued...", size=10, color=ft.Colors.GREY_400)
-        self.progress_bar = ft.ProgressBar(value=0, height=4, border_radius=2, color=ft.Colors.PURPLE_400, bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
-        self.percentage_text = ft.Text("0%", size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_300)
+        self.progress_bar = ft.ProgressBar(value=0, height=4, border_radius=2, color=pal.primary, bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE))
+        self.percentage_text = ft.Text("0%", size=10, weight=ft.FontWeight.BOLD, color=pal.light)
         
         self.content = ft.Column(
             [

@@ -53,7 +53,44 @@ def build():
     subprocess.check_call(cmd)
 
     output_exe_folder = os.path.join(dist_dir, "NovaDownloader")
-    print(f"[+] Build successful! Output located at: {output_exe_folder}")
+    print(f"[+] PyInstaller build finished! Checking FFmpeg bundling...")
+
+    # Ensure FFmpeg binaries are bundled into dist/NovaDownloader/ffmpeg/
+    target_ffmpeg_dir = os.path.join(output_exe_folder, "ffmpeg")
+    os.makedirs(target_ffmpeg_dir, exist_ok=True)
+
+    import shutil
+    ffmpeg_candidates = [
+        os.path.join(project_root, "ffmpeg"),
+        r"C:\ffmpeg\bin",
+        r"C:\ffmpeg",
+    ]
+    which_ff = shutil.which("ffmpeg")
+    if which_ff:
+        ffmpeg_candidates.append(os.path.dirname(which_ff))
+
+    ffmpeg_src_dir = None
+    for cand in ffmpeg_candidates:
+        if os.path.exists(os.path.join(cand, "ffmpeg.exe")):
+            ffmpeg_src_dir = cand
+            break
+
+    if ffmpeg_src_dir:
+        print(f"[*] Found FFmpeg binaries in: {ffmpeg_src_dir}")
+        for bin_name in ["ffmpeg.exe", "ffprobe.exe"]:
+            src_file = os.path.join(ffmpeg_src_dir, bin_name)
+            dst_file = os.path.join(target_ffmpeg_dir, bin_name)
+            if os.path.exists(src_file):
+                print(f"[*] Copying {bin_name} -> {dst_file}")
+                shutil.copy2(src_file, dst_file)
+            else:
+                print(f"[!] Info: {bin_name} not found in {ffmpeg_src_dir}")
+        if os.path.exists(os.path.join(target_ffmpeg_dir, "ffmpeg.exe")):
+            print(f"[+] Portable FFmpeg successfully bundled into: {target_ffmpeg_dir}")
+    else:
+        print("[!] WARNING: No ffmpeg.exe found to bundle! Ensure FFmpeg is placed in .\ffmpeg or installed on PATH.")
+
+    print(f"[+] Final portable build ready at: {output_exe_folder}")
 
 if __name__ == "__main__":
     build()

@@ -27,7 +27,20 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Download Portable FFmpeg Binaries
+        shell: powershell
+        run: |
+          Write-Host "Downloading standalone FFmpeg release from yt-dlp/FFmpeg-Builds..."
+          Invoke-WebRequest -Uri "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile "ffmpeg.zip"
+          Write-Host "Extracting FFmpeg..."
+          Expand-Archive -Path "ffmpeg.zip" -DestinationPath "ffmpeg_temp"
+          $binPath = Get-ChildItem -Path "ffmpeg_temp" -Recurse -Filter "ffmpeg.exe" | Select-Object -ExpandProperty DirectoryName -First 1
+          New-Item -ItemType Directory -Force -Path "ffmpeg"
+          Copy-Item "$binPath\ffmpeg.exe" -Destination "ffmpeg\ffmpeg.exe"
+          Copy-Item "$binPath\ffprobe.exe" -Destination "ffmpeg\ffprobe.exe"
+          Remove-Item -Recurse -Force "ffmpeg.zip", "ffmpeg_temp"
+          Write-Host "FFmpeg successfully prepared in .\ffmpeg"
+          Get-ChildItem -Path "ffmpeg"
 
       - name: Build Executable with PyInstaller
         run: |

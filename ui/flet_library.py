@@ -2,6 +2,7 @@ import flet as ft
 import database.db as db
 import os
 from core.config import config
+from ui.flet_styles import get_current_palette
 
 class LibraryView(ft.Column):
     def __init__(self, on_play_audio=None):
@@ -22,10 +23,11 @@ class LibraryView(ft.Column):
         if self.view_mode == mode:
             return
         self.view_mode = mode
-        self.list_mode_btn.icon_color = ft.Colors.PURPLE_300 if self.view_mode == "list" else ft.Colors.GREY_500
-        self.list_mode_btn.bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500) if self.view_mode == "list" else ft.Colors.TRANSPARENT
-        self.grid_mode_btn.icon_color = ft.Colors.PURPLE_300 if self.view_mode == "grid" else ft.Colors.GREY_500
-        self.grid_mode_btn.bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500) if self.view_mode == "grid" else ft.Colors.TRANSPARENT
+        pal = get_current_palette()
+        self.list_mode_btn.icon_color = pal.light if self.view_mode == "list" else ft.Colors.GREY_500
+        self.list_mode_btn.bgcolor = pal.tint_bg if self.view_mode == "list" else ft.Colors.TRANSPARENT
+        self.grid_mode_btn.icon_color = pal.light if self.view_mode == "grid" else ft.Colors.GREY_500
+        self.grid_mode_btn.bgcolor = pal.tint_bg if self.view_mode == "grid" else ft.Colors.TRANSPARENT
         self.apply_filter_render()
         try:
             self.update()
@@ -35,6 +37,7 @@ class LibraryView(ft.Column):
     def _build_ui(self):
         self.controls.clear()
         lang = config.get("language", "es")
+        pal = get_current_palette()
         
         # Compact Header
         self.title_text = ft.Text("Biblioteca" if lang == "es" else "Library", size=20, weight=ft.FontWeight.BOLD)
@@ -48,16 +51,16 @@ class LibraryView(ft.Column):
         self.list_mode_btn = ft.IconButton(
             icon=ft.Icons.VIEW_LIST_ROUNDED,
             icon_size=18,
-            icon_color=ft.Colors.PURPLE_300 if self.view_mode == "list" else ft.Colors.GREY_500,
-            bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500) if self.view_mode == "list" else ft.Colors.TRANSPARENT,
+            icon_color=pal.light if self.view_mode == "list" else ft.Colors.GREY_500,
+            bgcolor=pal.tint_bg if self.view_mode == "list" else ft.Colors.TRANSPARENT,
             tooltip="Vista en lista" if lang == "es" else "List view",
             on_click=lambda _: self.set_view_mode("list")
         )
         self.grid_mode_btn = ft.IconButton(
             icon=ft.Icons.GRID_VIEW_ROUNDED,
             icon_size=18,
-            icon_color=ft.Colors.PURPLE_300 if self.view_mode == "grid" else ft.Colors.GREY_500,
-            bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500) if self.view_mode == "grid" else ft.Colors.TRANSPARENT,
+            icon_color=pal.light if self.view_mode == "grid" else ft.Colors.GREY_500,
+            bgcolor=pal.tint_bg if self.view_mode == "grid" else ft.Colors.TRANSPARENT,
             tooltip="Vista en cuadrícula / carátulas" if lang == "es" else "Grid view",
             on_click=lambda _: self.set_view_mode("grid")
         )
@@ -71,7 +74,7 @@ class LibraryView(ft.Column):
         self.refresh_btn = ft.IconButton(
             icon=ft.Icons.REFRESH_ROUNDED,
             icon_size=18,
-            icon_color=ft.Colors.PURPLE_300,
+            icon_color=pal.light,
             tooltip="Refrescar" if lang == "es" else "Refresh", 
             on_click=lambda _: self.load_data(force_db=True)
         )
@@ -102,7 +105,7 @@ class LibraryView(ft.Column):
             content_padding=ft.Padding(10, 0, 10, 0),
             bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
             border_color=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
-            focused_border_color=ft.Colors.PURPLE_400,
+            focused_border_color=pal.primary,
             expand=True,
             on_change=self.on_search_change
         )
@@ -118,9 +121,9 @@ class LibraryView(ft.Column):
                 content=ft.Row(controls, spacing=4) if icon_enum else controls[0],
                 padding=ft.Padding(10, 4, 10, 4),
                 border_radius=12,
-                bgcolor=ft.Colors.PURPLE_600 if is_active else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                bgcolor=pal.dark if is_active else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
                 ink=True,
-                ink_color=ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400),
+                ink_color=pal.tint_border,
                 on_click=lambda _: self.set_filter(f_key)
             )
 
@@ -149,6 +152,7 @@ class LibraryView(ft.Column):
     def set_filter(self, f_type):
         self.filter_type = f_type
         lang = config.get("language", "es")
+        pal = get_current_palette()
         
         # Re-render chips concisely
         def make_chip(label, icon_enum, f_key):
@@ -161,9 +165,9 @@ class LibraryView(ft.Column):
                 content=ft.Row(controls, spacing=4) if icon_enum else controls[0],
                 padding=ft.Padding(10, 4, 10, 4),
                 border_radius=12,
-                bgcolor=ft.Colors.PURPLE_600 if is_active else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                bgcolor=pal.dark if is_active else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
                 ink=True,
-                ink_color=ft.Colors.with_opacity(0.2, ft.Colors.PURPLE_400),
+                ink_color=pal.tint_border,
                 on_click=lambda _: self.set_filter(f_key)
             )
 
@@ -278,6 +282,7 @@ class LibraryView(ft.Column):
     def create_grid_item(self, item):
         item_id, title, url, f_type, quality, date, size, path = item
         lang = config.get("language", "es")
+        pal = get_current_palette()
         
         file_exists = path and os.path.exists(path)
         is_audio = f_type == "audio" or (path and path.lower().endswith((".mp3", ".m4a", ".wav", ".flac", ".ogg", ".opus")))
@@ -293,15 +298,15 @@ class LibraryView(ft.Column):
             cover_control = ft.Image(src=thumb_path, width=180, height=115, fit=ft.BoxFit.COVER, border_radius=10)
         else:
             cover_control = ft.Container(
-                content=ft.Icon(ft.Icons.MUSIC_NOTE_ROUNDED if is_audio else ft.Icons.VIDEOCAM_ROUNDED, size=40, color=ft.Colors.PURPLE_300),
+                content=ft.Icon(ft.Icons.MUSIC_NOTE_ROUNDED if is_audio else ft.Icons.VIDEOCAM_ROUNDED, size=40, color=pal.light),
                 width=180,
                 height=115,
                 border_radius=10,
-                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500),
+                bgcolor=pal.tint_bg,
                 alignment=ft.Alignment.CENTER
             )
 
-        badge_bg = ft.Colors.PURPLE_400 if is_audio else ft.Colors.AMBER_400
+        badge_bg = pal.primary if is_audio else ft.Colors.AMBER_400
         badge_text = "AUDIO" if is_audio else "VIDEO"
         pill = ft.Container(
             content=ft.Text(badge_text, size=8.5, weight=ft.FontWeight.BOLD, color=ft.Colors.BLACK),
@@ -326,7 +331,7 @@ class LibraryView(ft.Column):
             ),
             ft.IconButton(
                 icon=ft.Icons.FOLDER_OPEN_ROUNDED,
-                icon_color=ft.Colors.PURPLE_300,
+                icon_color=pal.light,
                 icon_size=17,
                 tooltip="Abrir carpeta" if lang == "es" else "Open folder",
                 on_click=lambda _, p=path: self.open_folder(p)
@@ -357,15 +362,15 @@ class LibraryView(ft.Column):
             border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.WHITE)),
             animate=ft.Animation(160, ft.AnimationCurve.EASE_OUT),
             ink=True,
-            ink_color=ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500),
+            ink_color=pal.tint_border,
             on_click=lambda _, it=item: self.handle_play(it) if file_exists else None
         )
 
         def _make_grid_hover(c):
             def _h(e):
                 if e.data == "true":
-                    c.bgcolor = ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_500)
-                    c.border = ft.Border.all(1, ft.Colors.with_opacity(0.35, ft.Colors.PURPLE_400))
+                    c.bgcolor = pal.hover_bg
+                    c.border = ft.Border.all(1, pal.hover_border)
                 else:
                     c.bgcolor = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
                     c.border = ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.WHITE))
@@ -382,12 +387,13 @@ class LibraryView(ft.Column):
         # item: (id, title, url, file_type, quality, date, size, path)
         item_id, title, url, f_type, quality, date, size, path = item
         lang = config.get("language", "es")
+        pal = get_current_palette()
         
         is_audio = f_type == "audio" or (path and path.lower().endswith((".mp3", ".m4a", ".wav", ".flac", ".ogg", ".opus")))
         icon_type = ft.Icons.MUSIC_NOTE_ROUNDED if is_audio else ft.Icons.PLAY_CIRCLE_FILL_ROUNDED
-        icon_bg = ft.Colors.PURPLE_900 if is_audio else ft.Colors.DEEP_PURPLE_800
+        icon_bg = pal.deep if is_audio else ft.Colors.BLUE_GREY_900
         badge_text = "AUDIO" if is_audio else "VIDEO"
-        badge_color = ft.Colors.PURPLE_400 if is_audio else ft.Colors.AMBER_400
+        badge_color = pal.primary if is_audio else ft.Colors.AMBER_400
 
         file_exists = path and os.path.exists(path)
 
@@ -442,7 +448,7 @@ class LibraryView(ft.Column):
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.FOLDER_OPEN_ROUNDED,
-                                icon_color=ft.Colors.PURPLE_300,
+                                icon_color=pal.light,
                                 icon_size=18,
                                 tooltip="Abrir carpeta" if lang == "es" else "Open folder",
                                 on_click=lambda _, p=path: self.open_folder(p)
@@ -466,7 +472,7 @@ class LibraryView(ft.Column):
             border_radius=10,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.05, ft.Colors.WHITE)),
             ink=True,
-            ink_color=ft.Colors.with_opacity(0.15, ft.Colors.PURPLE_500),
+            ink_color=pal.tint_border,
             animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
             on_click=lambda _, it=item: self.handle_play(it) if file_exists else None
         )
@@ -474,8 +480,8 @@ class LibraryView(ft.Column):
         def _make_list_hover(cnt):
             def _h(e):
                 if e.data == "true":
-                    cnt.bgcolor = ft.Colors.with_opacity(0.07, ft.Colors.PURPLE_500)
-                    cnt.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.PURPLE_400))
+                    cnt.bgcolor = pal.hover_bg
+                    cnt.border = ft.Border.all(1, pal.hover_border)
                 else:
                     cnt.bgcolor = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
                     cnt.border = ft.Border.all(1, ft.Colors.with_opacity(0.05, ft.Colors.WHITE))

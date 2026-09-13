@@ -25,6 +25,7 @@ CONFIG_PATH = get_storage_path("config.json")
 
 DEFAULT_CONFIG = {
     "theme": "dark",
+    "theme_palette": "nebula_violet",
     "language": "es",
     "download_dir": os.path.expanduser("~/Downloads"),
     "embed_metadata": True,

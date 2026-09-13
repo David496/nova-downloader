@@ -3,7 +3,7 @@ from core.config import config, save_config
 import asyncio
 import tkinter as tk
 from tkinter import filedialog
-from ui.flet_styles import AppEvents
+from ui.flet_styles import AppEvents, get_current_palette, THEMES
 
 class SettingsView(ft.Column):
     def __init__(self):
@@ -17,6 +17,7 @@ class SettingsView(ft.Column):
     def _build_ui(self):
         self.controls.clear()
         lang = config.get("language", "es")
+        pal = get_current_palette()
         is_embed = config.get("embed_metadata", True)
         sub_enabled = config.get("download_subtitles", False)
         sub_lang = config.get("subtitle_lang", "es")
@@ -44,7 +45,7 @@ class SettingsView(ft.Column):
         path_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.FOLDER_SPECIAL_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Icon(ft.Icons.FOLDER_SPECIAL_ROUNDED, color=pal.primary, size=20),
                     ft.Text("Carpeta de Descargas" if lang == "es" else "Download Folder", size=15, weight=ft.FontWeight.W_600),
                 ], spacing=8),
                 ft.Row([
@@ -54,7 +55,7 @@ class SettingsView(ft.Column):
                         icon=ft.Icons.FOLDER_OPEN_ROUNDED,
                         style=ft.ButtonStyle(
                             shape=ft.RoundedRectangleBorder(radius=10),
-                            bgcolor=ft.Colors.PURPLE_600,
+                            bgcolor=pal.dark,
                             color=ft.Colors.WHITE,
                         ),
                         height=42,
@@ -72,14 +73,14 @@ class SettingsView(ft.Column):
         self.embed_switch = ft.Switch(
             label="Incrustar metadatos (título, artista) y portada automáticamente" if lang == "es" else "Automatically embed metadata (title, artist) & album cover",
             value=is_embed,
-            active_color=ft.Colors.PURPLE_500,
+            active_color=pal.primary,
             on_change=self.save_settings
         )
 
         meta_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.MUSIC_NOTE_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Icon(ft.Icons.MUSIC_NOTE_ROUNDED, color=pal.primary, size=20),
                     ft.Text("Música y Portadas" if lang == "es" else "Music & Album Art", size=15, weight=ft.FontWeight.W_600),
                 ], spacing=8),
                 self.embed_switch
@@ -94,14 +95,14 @@ class SettingsView(ft.Column):
         self.sub_switch = ft.Switch(
             label="Descargar subtítulos automáticamente al bajar videos" if lang == "es" else "Download subtitles automatically when saving videos",
             value=sub_enabled,
-            active_color=ft.Colors.PURPLE_500,
+            active_color=pal.primary,
             on_change=self.save_settings
         )
 
         self.embed_sub_switch = ft.Switch(
             label="Incrustar subtítulos dentro del video (si se desactiva, guarda .srt independiente)" if lang == "es" else "Embed subtitles inside video file (otherwise saves standalone .srt)",
             value=embed_subs,
-            active_color=ft.Colors.PURPLE_500,
+            active_color=pal.primary,
             on_change=self.save_settings
         )
 
@@ -122,7 +123,7 @@ class SettingsView(ft.Column):
         subs_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.SUBTITLES_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Icon(ft.Icons.SUBTITLES_ROUNDED, color=pal.primary, size=20),
                     ft.Text("Subtítulos" if lang == "es" else "Subtitles", size=15, weight=ft.FontWeight.W_600),
                 ], spacing=8),
                 self.sub_switch,
@@ -148,10 +149,86 @@ class SettingsView(ft.Column):
             expand=True
         )
 
+        # Section: Apariencia & Temas Épicos
+        current_theme_id = pal.id
+        current_theme_info = THEMES.get(current_theme_id, list(THEMES.values())[0])
+
+        theme_options = [
+            ft.DropdownOption(
+                key=t_key,
+                text=f"{t.icon}  {t.name} — {t.desc_es if lang == 'es' else t.desc_en}"
+            )
+            for t_key, t in THEMES.items()
+        ]
+
+        self.theme_dropdown = ft.Dropdown(
+            label="Paleta de Color Épica" if lang == "es" else "Epic Color Palette",
+            value=current_theme_id,
+            border_radius=10,
+            focused_border_color=pal.primary,
+            options=theme_options,
+            on_select=self.on_theme_select,
+            expand=True
+        )
+
+        active_badge = ft.Container(
+            content=ft.Row([
+                ft.Container(
+                    width=16,
+                    height=16,
+                    border_radius=8,
+                    bgcolor=current_theme_info.hex_preview,
+                    shadow=ft.BoxShadow(
+                        spread_radius=1,
+                        blur_radius=10,
+                        color=ft.Colors.with_opacity(0.8, current_theme_info.primary),
+                        offset=ft.Offset(0, 0)
+                    )
+                ),
+                ft.Column([
+                    ft.Text("Tema Activo" if lang == "es" else "Active Theme", size=10, color=ft.Colors.GREY_400),
+                    ft.Text(f"{current_theme_info.icon} {current_theme_info.name}", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ], spacing=1),
+                ft.Container(
+                    content=ft.Text(current_theme_info.hex_preview, size=11, color=current_theme_info.primary, weight=ft.FontWeight.BOLD),
+                    bgcolor=ft.Colors.with_opacity(0.12, current_theme_info.primary),
+                    padding=ft.Padding(8, 4, 8, 4),
+                    border_radius=6,
+                    border=ft.Border.all(1, ft.Colors.with_opacity(0.3, current_theme_info.primary))
+                )
+            ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.Padding(12, 8, 14, 8),
+            bgcolor=ft.Colors.with_opacity(0.08, current_theme_info.primary),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.25, current_theme_info.primary)),
+            border_radius=12,
+        )
+
+        appearance_card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.PALETTE_ROUNDED, color=pal.primary, size=20),
+                    ft.Text("Paleta de Color & Temas Épicos" if lang == "es" else "Color Palette & Epic Themes", size=15, weight=ft.FontWeight.W_600),
+                ], spacing=8),
+                ft.Text(
+                    "Personaliza la atmósfera de Nova Downloader. Los cambios se aplican al instante." if lang == "es" else "Customize the Nova Downloader atmosphere. Changes apply in real time.",
+                    size=12,
+                    color=ft.Colors.GREY_400
+                ),
+                ft.Row([
+                    self.theme_dropdown,
+                    active_badge
+                ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+            ], spacing=12),
+            padding=14,
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+            border_radius=14,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE))
+        )
+
         ui_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.LANGUAGE_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Icon(ft.Icons.LANGUAGE_ROUNDED, color=pal.primary, size=20),
                     ft.Text("Idioma" if lang == "es" else "Language", size=15, weight=ft.FontWeight.W_600),
                 ], spacing=8),
                 ft.Row([self.lang_dropdown], spacing=8)
@@ -168,7 +245,7 @@ class SettingsView(ft.Column):
         cache_card = ft.Container(
             content=ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.CLEANING_SERVICES_ROUNDED, color=ft.Colors.PURPLE_400, size=20),
+                    ft.Icon(ft.Icons.CLEANING_SERVICES_ROUNDED, color=pal.primary, size=20),
                     ft.Text("Caché de Reproducción Online" if lang == "es" else "Online Player Cache", size=15, weight=ft.FontWeight.W_600),
                 ], spacing=8),
                 ft.Row([
@@ -178,7 +255,7 @@ class SettingsView(ft.Column):
                         icon=ft.Icons.DELETE_SWEEP_ROUNDED,
                         style=ft.ButtonStyle(
                             shape=ft.RoundedRectangleBorder(radius=10),
-                            bgcolor=ft.Colors.PURPLE_700,
+                            bgcolor=pal.dark,
                             color=ft.Colors.WHITE,
                         ),
                         height=38,
@@ -196,14 +273,15 @@ class SettingsView(ft.Column):
         # About Footer Card with Developer Credit
         about_card = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.CODE_ROUNDED, color=ft.Colors.PURPLE_300, size=18),
-                ft.Text("Nova Downloader v2.1.0 • Desarrollado por David496", size=12, color=ft.Colors.PURPLE_300, weight=ft.FontWeight.W_600),
+                ft.Icon(ft.Icons.CODE_ROUNDED, color=pal.light, size=18),
+                ft.Text("Nova Downloader v2.1.0 • Desarrollado por David496", size=12, color=pal.light, weight=ft.FontWeight.W_600),
             ], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
             padding=12,
             alignment=ft.Alignment.CENTER
         )
 
         self.controls.extend([
+            appearance_card,
             path_card,
             meta_card,
             subs_card,
@@ -259,10 +337,18 @@ class SettingsView(ft.Column):
             except Exception:
                 pass
 
+    def on_theme_select(self, e):
+        if hasattr(self, "theme_dropdown") and self.theme_dropdown.value:
+            config["theme_palette"] = self.theme_dropdown.value
+            save_config(config)
+            AppEvents.notify()
+
     def save_settings(self, e):
         config["download_dir"] = self.path_input.value
         config["language"] = self.lang_dropdown.value
         config["theme"] = "dark"
+        if hasattr(self, "theme_dropdown") and self.theme_dropdown.value:
+            config["theme_palette"] = self.theme_dropdown.value
         config["embed_metadata"] = self.embed_switch.value
         config["download_subtitles"] = self.sub_switch.value
         config["embed_subtitles"] = self.embed_sub_switch.value
